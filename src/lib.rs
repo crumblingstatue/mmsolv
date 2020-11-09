@@ -41,8 +41,8 @@ pub struct Indicator {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-enum UsedState {
-    Free,
+enum Marker {
+    None,
     Dot,
     Heart,
 }
@@ -51,34 +51,34 @@ enum UsedState {
 fn compare(guess: &Pegs, clue: &Pegs) -> Indicator {
     assert!(guess.len() == clue.len());
     let len = guess.len();
-    let mut dots: u8 = 0;
-    let mut hearts: u8 = 0;
-    let mut map = vec![UsedState::Free; len];
+    let mut markers = vec![Marker::None; len];
     // First determine hearts
     for (i, &g_peg) in guess.iter().enumerate() {
         if clue[i] == g_peg {
-            map[i] = UsedState::Heart;
+            markers[i] = Marker::Heart;
         }
     }
     // Then determine dots
     for (i, &g_peg) in guess.iter().enumerate() {
-        if map[i] == UsedState::Heart {
+        if markers[i] == Marker::Heart {
             // A peg used for a heart can't be used for being a dot.
             continue;
         }
         for (j, &c_peg) in clue.iter().enumerate() {
-            if g_peg == c_peg && map[j] == UsedState::Free {
-                map[j] = UsedState::Dot;
+            if g_peg == c_peg && markers[j] == Marker::None {
+                markers[j] = Marker::Dot;
                 // A single guess peg can only ever count as one dot, and
                 // we just counted a dot, so break.
                 break;
             }
         }
     }
-    for marker in map {
-        if marker == UsedState::Dot {
+    let mut dots: u8 = 0;
+    let mut hearts: u8 = 0;
+    for marker in markers {
+        if marker == Marker::Dot {
             dots += 1;
-        } else if marker == UsedState::Heart {
+        } else if marker == Marker::Heart {
             hearts += 1;
         }
     }

@@ -111,4 +111,8 @@ fn test_compare() {
         compare(b"wwwgr", b"rwcrg"),
         Indicator { dots: 2, hearts: 1 }
     );
+    assert_eq!(
+        compare(b"brbrr", b"ggbgb"),
+        Indicator { dots: 1, hearts: 1 }
+    );
 }

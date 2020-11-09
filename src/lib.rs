@@ -54,17 +54,24 @@ fn compare(guess: &Pegs, clue: &Pegs) -> Indicator {
     let mut dots: u8 = 0;
     let mut hearts: u8 = 0;
     let mut map = vec![UsedState::Free; len];
+    // First determine hearts
     for (i, &g_peg) in guess.iter().enumerate() {
         if clue[i] == g_peg {
             map[i] = UsedState::Heart;
-        } else {
-            for (j, &c_peg) in clue.iter().enumerate() {
-                if g_peg == c_peg && map[j] == UsedState::Free {
-                    map[j] = UsedState::Dot;
-                    // A single guess peg can only ever count as one dot, and
-                    // we just counted a dot, so break.
-                    break;
-                }
+        }
+    }
+    // Then determine dots
+    for (i, &g_peg) in guess.iter().enumerate() {
+        if map[i] == UsedState::Heart {
+            // A peg used for a heart can't be used for being a dot.
+            continue;
+        }
+        for (j, &c_peg) in clue.iter().enumerate() {
+            if g_peg == c_peg && map[j] == UsedState::Free {
+                map[j] = UsedState::Dot;
+                // A single guess peg can only ever count as one dot, and
+                // we just counted a dot, so break.
+                break;
             }
         }
     }

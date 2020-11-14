@@ -95,7 +95,11 @@ fn validate_guess(guess: &Pegs, clues: &[Clue]) -> bool {
 }
 
 pub fn solve(set: &Pegs, clues: &[Clue]) -> Option<String> {
-    let combos = combinations::SliceCombo::new(set, clues[0].pegs.len());
+    let first_clue = match clues.get(0) {
+        Some(clue) => clue,
+        None => return None,
+    };
+    let combos = combinations::SliceCombo::new(set, first_clue.pegs.len());
     for guess in combos {
         if validate_guess(&guess, clues) {
             return Some(String::from_utf8(guess).unwrap());

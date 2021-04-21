@@ -157,8 +157,9 @@ impl IncWrap {
     }
 }
 
+#[derive(Debug)]
 struct ClueRow {
-    slots: Vec<Option<Clue>>,
+    slots: Vec<Option<mmsolv::Peg>>,
 }
 
 impl ClueRow {
@@ -170,34 +171,74 @@ impl ClueRow {
 }
 
 const CLUE_ROW_X_OFFSET: f32 = 300.;
+const CLUE_ROW_Y_OFFSET: f32 = 16.;
 const BOX_PADDING_INNER: f32 = 4.;
 const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
 const BOX_VERT_DISTANCE: f32 = 8.;
 const BOX_HORIZ_DISTANCE: f32 = 8.;
 
-fn draw_clue_row(row_num: usize, row: &ClueRow) {
-    for (i, slot) in row.slots.iter().enumerate() {
-        draw_rectangle_lines(
-            CLUE_ROW_X_OFFSET + i as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
-            16. + row_num as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
-            BOX_SIZE,
-            BOX_SIZE,
-            1.0,
-            RED,
-        );
+fn clue_rect(row: usize, col: usize) -> Rect {
+    Rect {
+        x: CLUE_ROW_X_OFFSET + col as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
+        y: CLUE_ROW_Y_OFFSET + row as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
+        w: BOX_SIZE,
+        h: BOX_SIZE,
     }
 }
 
-fn draw_clue_rows(rows: &[ClueRow]) {
+fn clue_rects(rows: &[ClueRow]) -> impl Iterator<Item = (Rect, usize, usize)> + '_ {
+    rows.iter().enumerate().flat_map(|(row_num, row)| {
+        row.slots
+            .iter()
+            .enumerate()
+            .map(move |(col, _)| (clue_rect(row_num, col), row_num, col))
+    })
+}
+
+fn draw_clue_row(
+    row_num: usize,
+    row: &ClueRow,
+    mx: f32,
+    my: f32,
+    picked_color: Option<Color>,
+    peg_tex: Texture2D,
+) {
+    for (i, slot) in row.slots.iter().enumerate() {
+        let rect = clue_rect(row_num, i);
+        if let Some(picked_color) = picked_color {
+            if rect.contains(Vec2::new(mx, my)) {
+                draw_rectangle(rect.x, rect.y, rect.w, rect.h, picked_color);
+            }
+        }
+        if let Some(pegid) = *slot {
+            draw_peg(
+                peg_tex,
+                Pegbug {
+                    id: pegid,
+                    x: rect.x,
+                    y: rect.y,
+                },
+            );
+        }
+        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
+    }
+}
+
+fn draw_clue_rows(
+    rows: &[ClueRow],
+    mx: f32,
+    my: f32,
+    picked_color: Option<Color>,
+    peg_tex: Texture2D,
+) {
     for (i, row) in rows.iter().enumerate() {
-        draw_clue_row(i, row);
+        draw_clue_row(i, row, mx, my, picked_color, peg_tex);
     }
 }
 
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
-    let mut placed_pegs = Vec::new();
     let mut n_pegs_in_clues = IncWrap::new(MIN_PEGS, MAX_PEGS);
     macro ptype_but_text() {
         format!("Puzzle type: {} peg", n_pegs_in_clues.value)
@@ -210,12 +251,6 @@ async fn main() {
         let peg_tex =
             Texture2D::from_file_with_format(include_bytes!("../../assets/pegbug.png"), None);
         let (mx, my) = mouse_position();
-        draw_bottom_pegs(peg_tex);
-        if let Some(ref mut peg) = picked_peg {
-            peg.x = mx - 32.;
-            peg.y = my - 32.;
-            draw_peg(peg_tex, *peg);
-        }
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
             if ptype_but.mouse_over(mx, my) {
@@ -235,17 +270,34 @@ async fn main() {
         }
         if is_mouse_button_released(MouseButton::Left) {
             if let Some(peg) = picked_peg {
-                placed_pegs.push(peg);
+                let mut ins_loc = None;
+                for (clue_rect, row, col) in clue_rects(&clue_rows) {
+                    if clue_rect.contains(Vec2::new(mx, my)) {
+                        ins_loc = Some((row, col));
+                        break;
+                    }
+                }
+                if let Some((row, col)) = ins_loc {
+                    clue_rows[row].slots[col] = Some(peg.id);
+                }
                 picked_peg = None;
             }
         }
-        ptype_but.draw(mx, my);
-        clue_add_but.draw(mx, my);
-        draw_clue_rows(&clue_rows);
-
-        for peg in &placed_pegs {
+        draw_clue_rows(
+            &clue_rows,
+            mx,
+            my,
+            picked_peg.map(|p| PEG_COLORS[p.id as usize]),
+            peg_tex,
+        );
+        draw_bottom_pegs(peg_tex);
+        if let Some(ref mut peg) = picked_peg {
+            peg.x = mx - 32.;
+            peg.y = my - 32.;
             draw_peg(peg_tex, *peg);
         }
+        ptype_but.draw(mx, my);
+        clue_add_but.draw(mx, my);
 
         next_frame().await
     }

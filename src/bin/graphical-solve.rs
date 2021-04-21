@@ -39,7 +39,10 @@ const PEG_COLORS: [Color; 15] = colors! {
 struct Pegbug {
     x: f32,
     y: f32,
-    color_idx: usize,
+    /// Simple unique identifier for type of peg.
+    ///
+    /// For drawing them, we use the id as an index into a color array.
+    id: u8,
 }
 
 impl Pegbug {
@@ -59,7 +62,7 @@ fn bottom_peg(idx: usize) -> Pegbug {
     Pegbug {
         x: (idx % BUGS_PER_ROW as usize) as f32 * 80.,
         y: screen_height() - (PEG_SIZE * 2.0) + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
-        color_idx: idx,
+        id: idx as u8,
     }
 }
 
@@ -68,7 +71,7 @@ fn bottom_pegs() -> impl Iterator<Item = Pegbug> {
 }
 
 fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
-    draw_texture(peg_tex, peg.x, peg.y, PEG_COLORS[peg.color_idx]);
+    draw_texture(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize]);
 }
 
 fn draw_bottom_pegs(peg_tex: Texture2D) {

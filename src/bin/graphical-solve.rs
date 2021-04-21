@@ -1,7 +1,34 @@
 use macroquad::prelude::*;
 
 const PEG_SIZE: f32 = 64.0;
-const PEG_COLORS: [Color; 6] = [RED, YELLOW, GREEN, BLUE, VIOLET, BROWN];
+
+macro_rules! colors {
+    ($($r:expr,$g:expr,$b:expr;)*) => {
+        [
+            $(
+            color_u8!($r, $g, $b, 255),
+            )*
+        ]
+    };
+}
+
+const PEG_COLORS: [Color; 15] = colors! {
+     65, 167,  64;
+    111, 131, 219;
+    245, 126, 125;
+    143, 234,  64;
+    177, 237, 238;
+     26,  26,  30;
+     11,  69, 166;
+    178,  56,  35;
+    238, 218,  77;
+    180, 121,  34;
+    168,  84, 203;
+    249, 187,  74;
+    254, 206, 239;
+    249, 247, 217;
+    122, 130, 137;
+};
 
 #[derive(Clone, Copy)]
 struct Pegbug {
@@ -21,10 +48,12 @@ impl Pegbug {
     }
 }
 
+const BUGS_PER_ROW: u8 = 8;
+
 fn bottom_peg(idx: usize) -> Pegbug {
     Pegbug {
-        x: idx as f32 * 80.,
-        y: screen_height() - PEG_SIZE,
+        x: (idx % BUGS_PER_ROW as usize) as f32 * 80.,
+        y: screen_height() - (PEG_SIZE * 2.0) + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
         color_idx: idx,
     }
 }
@@ -58,19 +87,17 @@ async fn main() {
             peg.y = my - 32.;
             draw_peg(peg_tex, *peg);
         }
-        if is_mouse_button_pressed(MouseButton::Left) {
-            match picked_peg {
-                None => {
-                    for peg in bottom_pegs() {
-                        if peg.rect().contains(Vec2::new(mx, my)) {
-                            picked_peg = Some(peg);
-                        }
-                    }
+        if is_mouse_button_pressed(MouseButton::Left) && picked_peg.is_none() {
+            for peg in bottom_pegs() {
+                if peg.rect().contains(Vec2::new(mx, my)) {
+                    picked_peg = Some(peg);
                 }
-                Some(peg) => {
-                    placed_pegs.push(peg);
-                    picked_peg = None;
-                }
+            }
+        }
+        if is_mouse_button_released(MouseButton::Left) {
+            if let Some(peg) = picked_peg {
+                placed_pegs.push(peg);
+                picked_peg = None;
             }
         }
 

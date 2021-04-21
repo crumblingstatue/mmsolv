@@ -35,7 +35,6 @@ fn bottom_pegs() -> impl Iterator<Item = Pegbug> {
 
 fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
     draw_texture(peg_tex, peg.x, peg.y, PEG_COLORS[peg.color_idx]);
-    draw_rectangle_lines(peg.x, peg.y, PEG_SIZE, PEG_SIZE, 3.0, RED);
 }
 
 fn draw_bottom_pegs(peg_tex: Texture2D) {

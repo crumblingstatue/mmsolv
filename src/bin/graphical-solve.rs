@@ -1,7 +1,10 @@
 #![feature(decl_macro)]
+#![allow(clippy::clippy::too_many_arguments)]
+
+use std::collections::HashSet;
 
 use macroquad::prelude::*;
-use mmsolv::{solve, Clue};
+use mmsolv::{solve_raw, Clue, Indicator};
 
 const PEG_SIZE: f32 = 64.0;
 
@@ -156,16 +159,26 @@ impl IncWrap {
         }
     }
 }
-
-#[derive(Debug)]
 struct ClueRow {
     slots: Vec<Option<mmsolv::Peg>>,
+    hearts: u8,
+    dots: u8,
+    dot_add_but: SimpleButton,
+    dot_rem_but: SimpleButton,
+    heart_add_but: SimpleButton,
+    heart_rem_but: SimpleButton,
 }
 
 impl ClueRow {
     pub fn new(slots: u8) -> Self {
         Self {
             slots: vec![None; slots as usize],
+            hearts: 0,
+            dots: 0,
+            dot_add_but: SimpleButton::new("+".into(), 0., 0., 24),
+            dot_rem_but: SimpleButton::new("-".into(), 0., 0., 24),
+            heart_add_but: SimpleButton::new("+".into(), 0., 0., 24),
+            heart_rem_but: SimpleButton::new("-".into(), 0., 0., 24),
         }
     }
 }
@@ -195,13 +208,16 @@ fn clue_rects(rows: &[ClueRow]) -> impl Iterator<Item = (Rect, usize, usize)> + 
     })
 }
 
+// Also readjusts buttons
 fn draw_clue_row(
     row_num: usize,
-    row: &ClueRow,
+    row: &mut ClueRow,
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
     peg_tex: Texture2D,
+    dot_tex: Texture2D,
+    heart_tex: Texture2D,
 ) {
     for (i, slot) in row.slots.iter().enumerate() {
         let rect = clue_rect(row_num, i);
@@ -222,34 +238,102 @@ fn draw_clue_row(
         }
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
     }
+    let last_rect = clue_rect(row_num, row.slots.len() - 1);
+    row.dot_add_but.rect.x = last_rect.x + 8. + BOX_SIZE;
+    row.dot_add_but.rect.y = last_rect.y + 8.;
+    row.dot_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
+    row.dot_rem_but.rect.y = last_rect.y + 8.;
+    row.dot_add_but.draw(mx, my);
+    row.dot_rem_but.draw(mx, my);
+    row.heart_add_but.rect.x = last_rect.x + 8. + BOX_SIZE;
+    row.heart_add_but.rect.y = last_rect.y + 8. + 32.;
+    row.heart_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
+    row.heart_rem_but.rect.y = last_rect.y + 8. + 32.;
+    row.heart_add_but.draw(mx, my);
+    row.heart_rem_but.draw(mx, my);
+    for i in 0..row.dots {
+        draw_texture(
+            dot_tex,
+            last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.y + 2.0,
+            WHITE,
+        );
+    }
+    for i in 0..row.hearts {
+        draw_texture(
+            heart_tex,
+            last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.y + 40.0,
+            WHITE,
+        );
+    }
 }
 
 fn draw_clue_rows(
-    rows: &[ClueRow],
+    rows: &mut [ClueRow],
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
     peg_tex: Texture2D,
+    dot_tex: Texture2D,
+    heart_tex: Texture2D,
 ) {
-    for (i, row) in rows.iter().enumerate() {
-        draw_clue_row(i, row, mx, my, picked_color, peg_tex);
+    for (i, row) in rows.iter_mut().enumerate() {
+        draw_clue_row(i, row, mx, my, picked_color, peg_tex, dot_tex, heart_tex);
     }
+}
+
+fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
+    let mut clues = Vec::new();
+    let mut set = HashSet::new();
+    for row in rows {
+        let clue = Clue {
+            indicator: Indicator {
+                dots: row.dots,
+                hearts: row.hearts,
+            },
+            pegs: {
+                let mut pegs = Vec::new();
+                for slot in &row.slots {
+                    let &val = match slot {
+                        Some(id) => {
+                            set.insert(*id);
+                            id
+                        }
+                        None => return Err("Empty slot somewhere".into()),
+                    };
+                    pegs.push(val);
+                }
+                pegs.into_boxed_slice()
+            },
+        };
+        clues.push(clue);
+    }
+    Ok((set.into_iter().collect::<Vec<_>>(), clues))
 }
 
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
     let mut n_pegs_in_clues = IncWrap::new(MIN_PEGS, MAX_PEGS);
+    let mut solve_msg: String = String::new();
     macro ptype_but_text() {
         format!("Puzzle type: {} peg", n_pegs_in_clues.value)
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = SimpleButton::new("Add clue row".into(), 8.0, 48.0, 32);
+    let clue_add_but = SimpleButton::new("+ row".into(), 8.0, 48.0, 32);
+    let clue_rem_but = SimpleButton::new("- row".into(), 148.0, 48.0, 32);
+    let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows = Vec::new();
+    let mut solutions = Vec::new();
     loop {
         clear_background(WHITE);
         let peg_tex =
             Texture2D::from_file_with_format(include_bytes!("../../assets/pegbug.png"), None);
+        let dot_tex =
+            Texture2D::from_file_with_format(include_bytes!("../../assets/dot.png"), None);
+        let heart_tex =
+            Texture2D::from_file_with_format(include_bytes!("../../assets/heart.png"), None);
         let (mx, my) = mouse_position();
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -259,6 +343,35 @@ async fn main() {
             }
             if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value));
+            }
+            if clue_rem_but.mouse_over(mx, my) {
+                clue_rows.pop();
+            }
+            if solve_but.mouse_over(mx, my) {
+                match conv_mmsolv(&clue_rows) {
+                    Ok((set, clues)) => {
+                        solutions = solve_raw(&set, &clues);
+                        solve_msg = format!("{} solutions found: ", solutions.len());
+                    }
+                    Err(e) => {
+                        solve_msg = e;
+                        solutions.clear();
+                    }
+                }
+            }
+            for row in &mut clue_rows {
+                if row.dot_add_but.mouse_over(mx, my) {
+                    row.dots += 1;
+                }
+                if row.heart_add_but.mouse_over(mx, my) {
+                    row.hearts += 1;
+                }
+                if row.dot_rem_but.mouse_over(mx, my) && row.dots > 0 {
+                    row.dots -= 1;
+                }
+                if row.heart_rem_but.mouse_over(mx, my) && row.hearts > 0 {
+                    row.hearts -= 1;
+                }
             }
             if picked_peg.is_none() {
                 for peg in bottom_pegs() {
@@ -284,13 +397,17 @@ async fn main() {
             }
         }
         draw_clue_rows(
-            &clue_rows,
+            &mut clue_rows,
             mx,
             my,
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
             peg_tex,
+            dot_tex,
+            heart_tex,
         );
         draw_bottom_pegs(peg_tex);
+        draw_text(&solve_msg, 8., 150., 32., BLACK);
+        draw_solutions(&solutions, peg_tex);
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
@@ -298,7 +415,24 @@ async fn main() {
         }
         ptype_but.draw(mx, my);
         clue_add_but.draw(mx, my);
+        clue_rem_but.draw(mx, my);
+        solve_but.draw(mx, my);
 
         next_frame().await
+    }
+}
+
+fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D) {
+    for (row, sol) in solutions.iter().enumerate() {
+        for (col, peg_id) in sol.iter().enumerate() {
+            draw_peg(
+                peg_tex,
+                Pegbug {
+                    x: col as f32 * 68.,
+                    y: 180. + row as f32 * 68.,
+                    id: *peg_id,
+                },
+            )
+        }
     }
 }

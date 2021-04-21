@@ -1,6 +1,7 @@
 #![feature(decl_macro)]
 
 use macroquad::prelude::*;
+use mmsolv::{solve, Clue};
 
 const PEG_SIZE: f32 = 64.0;
 
@@ -156,6 +157,43 @@ impl IncWrap {
     }
 }
 
+struct ClueRow {
+    slots: Vec<Option<Clue>>,
+}
+
+impl ClueRow {
+    pub fn new(slots: u8) -> Self {
+        Self {
+            slots: vec![None; slots as usize],
+        }
+    }
+}
+
+const CLUE_ROW_X_OFFSET: f32 = 300.;
+const BOX_PADDING_INNER: f32 = 4.;
+const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
+const BOX_VERT_DISTANCE: f32 = 8.;
+const BOX_HORIZ_DISTANCE: f32 = 8.;
+
+fn draw_clue_row(row_num: usize, row: &ClueRow) {
+    for (i, slot) in row.slots.iter().enumerate() {
+        draw_rectangle_lines(
+            CLUE_ROW_X_OFFSET + i as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
+            16. + row_num as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
+            BOX_SIZE,
+            BOX_SIZE,
+            1.0,
+            RED,
+        );
+    }
+}
+
+fn draw_clue_rows(rows: &[ClueRow]) {
+    for (i, row) in rows.iter().enumerate() {
+        draw_clue_row(i, row);
+    }
+}
+
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
@@ -165,6 +203,8 @@ async fn main() {
         format!("Puzzle type: {} peg", n_pegs_in_clues.value)
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
+    let clue_add_but = SimpleButton::new("Add clue row".into(), 8.0, 48.0, 32);
+    let mut clue_rows = Vec::new();
     loop {
         clear_background(WHITE);
         let peg_tex =
@@ -182,6 +222,9 @@ async fn main() {
                 n_pegs_in_clues.inc();
                 ptype_but.set_text(ptype_but_text!());
             }
+            if clue_add_but.mouse_over(mx, my) {
+                clue_rows.push(ClueRow::new(n_pegs_in_clues.value));
+            }
             if picked_peg.is_none() {
                 for peg in bottom_pegs() {
                     if peg.rect().contains(Vec2::new(mx, my)) {
@@ -197,6 +240,8 @@ async fn main() {
             }
         }
         ptype_but.draw(mx, my);
+        clue_add_but.draw(mx, my);
+        draw_clue_rows(&clue_rows);
 
         for peg in &placed_pegs {
             draw_peg(peg_tex, *peg);

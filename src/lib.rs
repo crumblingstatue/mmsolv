@@ -28,13 +28,13 @@ mod combinations;
 pub type Peg = u8;
 pub type Pegs = [Peg];
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Clue {
     pub indicator: Indicator,
     pub pegs: Box<Pegs>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Indicator {
     pub dots: u8,
     pub hearts: u8,

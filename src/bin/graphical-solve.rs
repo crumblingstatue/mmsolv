@@ -74,8 +74,33 @@ fn bottom_pegs() -> impl Iterator<Item = Pegbug> {
     (0..PEG_COLORS.len()).map(bottom_peg)
 }
 
+const PEG_SRC_RECT: Rect = Rect {
+    x: 64.,
+    y: 0.,
+    w: 58.,
+    h: 58.,
+};
+
+const DOT_SRC_RECT: Rect = Rect {
+    x: 0.,
+    y: 0.,
+    w: 21.,
+    h: 21.,
+};
+
+const HEART_SRC_RECT: Rect = Rect {
+    x: 32.,
+    y: 0.,
+    w: 23.,
+    h: 21.,
+};
+
 fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
-    draw_texture(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize]);
+    let params = DrawTextureParams {
+        source: Some(PEG_SRC_RECT),
+        ..Default::default()
+    };
+    draw_texture_ex(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize], params);
 }
 
 fn draw_bottom_pegs(peg_tex: Texture2D) {
@@ -215,9 +240,7 @@ fn draw_clue_row(
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
-    peg_tex: Texture2D,
-    dot_tex: Texture2D,
-    heart_tex: Texture2D,
+    tex: Texture2D,
 ) {
     for (i, slot) in row.slots.iter().enumerate() {
         let rect = clue_rect(row_num, i);
@@ -228,7 +251,7 @@ fn draw_clue_row(
         }
         if let Some(pegid) = *slot {
             draw_peg(
-                peg_tex,
+                tex,
                 Pegbug {
                     id: pegid,
                     x: rect.x,
@@ -252,19 +275,27 @@ fn draw_clue_row(
     row.heart_add_but.draw(mx, my);
     row.heart_rem_but.draw(mx, my);
     for i in 0..row.dots {
-        draw_texture(
-            dot_tex,
+        draw_texture_ex(
+            tex,
             last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
             last_rect.y + 2.0,
             WHITE,
+            DrawTextureParams {
+                source: Some(DOT_SRC_RECT),
+                ..Default::default()
+            },
         );
     }
     for i in 0..row.hearts {
-        draw_texture(
-            heart_tex,
+        draw_texture_ex(
+            tex,
             last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
             last_rect.y + 40.0,
             WHITE,
+            DrawTextureParams {
+                source: Some(HEART_SRC_RECT),
+                ..Default::default()
+            },
         );
     }
 }
@@ -274,12 +305,10 @@ fn draw_clue_rows(
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
-    peg_tex: Texture2D,
-    dot_tex: Texture2D,
-    heart_tex: Texture2D,
+    tex: Texture2D,
 ) {
     for (i, row) in rows.iter_mut().enumerate() {
-        draw_clue_row(i, row, mx, my, picked_color, peg_tex, dot_tex, heart_tex);
+        draw_clue_row(i, row, mx, my, picked_color, tex);
     }
 }
 
@@ -328,12 +357,8 @@ async fn main() {
     let mut solutions = Vec::new();
     loop {
         clear_background(WHITE);
-        let peg_tex =
-            Texture2D::from_file_with_format(include_bytes!("../../assets/pegbug.png"), None);
-        let dot_tex =
-            Texture2D::from_file_with_format(include_bytes!("../../assets/dot.png"), None);
-        let heart_tex =
-            Texture2D::from_file_with_format(include_bytes!("../../assets/heart.png"), None);
+        let tex =
+            Texture2D::from_file_with_format(include_bytes!("../../assets/spritesheet.png"), None);
         let (mx, my) = mouse_position();
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -404,17 +429,15 @@ async fn main() {
             mx,
             my,
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
-            peg_tex,
-            dot_tex,
-            heart_tex,
+            tex,
         );
-        draw_bottom_pegs(peg_tex);
+        draw_bottom_pegs(tex);
         draw_text(&solve_msg, 8., 150., 32., BLACK);
-        draw_solutions(&solutions, peg_tex);
+        draw_solutions(&solutions, tex);
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
-            draw_peg(peg_tex, *peg);
+            draw_peg(tex, *peg);
         }
         ptype_but.draw(mx, my);
         clue_add_but.draw(mx, my);

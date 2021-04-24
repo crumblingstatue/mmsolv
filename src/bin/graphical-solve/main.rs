@@ -451,6 +451,31 @@ async fn main() {
                     }
                 }
                 let mut rem = None;
+                for (clue_rect, row, col) in clue_rects(&clue_rows) {
+                    if clue_rect.contains(Vec2::new(mx, my)) {
+                        picked_peg = match clue_rows.get(row) {
+                            Some(clue_row) => match clue_row.slots.get(col) {
+                                Some(Some(id)) => {
+                                    if !is_key_down(KeyCode::LeftControl) {
+                                        rem = Some((row, col));
+                                    }
+                                    Some(Pegbug {
+                                        x: 0.,
+                                        y: 0.,
+                                        id: *id,
+                                    })
+                                }
+                                _ => None,
+                            },
+                            None => None,
+                        };
+                        break;
+                    }
+                }
+                if let Some((row, col)) = rem {
+                    clue_rows[row].slots[col] = None;
+                }
+                let mut rem = None;
                 for (i, peg) in crate::free_pegs(&free_pegs) {
                     if peg.rect().contains(Vec2::new(mx, my)) {
                         picked_peg = Some(peg);

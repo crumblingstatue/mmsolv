@@ -385,7 +385,7 @@ async fn main() {
     let clue_add_but = SimpleButton::new("+ row".into(), 8.0, 48.0, 32);
     let clue_rem_but = SimpleButton::new("- row".into(), 148.0, 48.0, 32);
     let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
-    let mut clue_rows: Vec<ClueRow> = Vec::new();
+    let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value)];
     let mut solutions = Vec::new();
     loop {
         clear_background(WHITE);
@@ -404,7 +404,7 @@ async fn main() {
             if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value));
             }
-            if clue_rem_but.mouse_over(mx, my) {
+            if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
             }
             if solve_but.mouse_over(mx, my) {

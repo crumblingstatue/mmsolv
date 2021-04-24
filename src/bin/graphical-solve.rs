@@ -382,8 +382,8 @@ async fn main() {
         format!("Puzzle type: {} peg", n_pegs_in_clues.value)
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = SimpleButton::new("+ row".into(), 8.0, 48.0, 32);
-    let clue_rem_but = SimpleButton::new("- row".into(), 148.0, 48.0, 32);
+    let clue_add_but = ImgButton::new(src_rects::PLUS, 180.0, 48.0);
+    let clue_rem_but = ImgButton::new(src_rects::MINUS, 210.0, 48.0);
     let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value)];
     let mut solutions = Vec::new();
@@ -472,8 +472,15 @@ async fn main() {
             draw_peg(tex, *peg);
         }
         ptype_but.draw(mx, my);
-        clue_add_but.draw(mx, my);
-        clue_rem_but.draw(mx, my);
+        draw_text(
+            &format!("{} clue rows", clue_rows.len()),
+            8.0,
+            64.0,
+            32.0,
+            BLACK,
+        );
+        clue_add_but.draw(tex, mx, my);
+        clue_rem_but.draw(tex, mx, my);
         solve_but.draw(mx, my);
 
         next_frame().await

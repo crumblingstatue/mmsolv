@@ -80,8 +80,8 @@ mod src_rects {
     }
     rects! {
         PEG: 64, 0, 58, 58
-        DOT: 0, 0, 21, 21
-        HEART: 32, 0, 23, 21
+        HEART: 0, 0, 21, 21
+        DOT: 32, 0, 23, 21
         PLUS: 128, 0, 16, 16
         MINUS: 144, 0, 16, 16
     }
@@ -111,25 +111,32 @@ struct SimpleButton {
 struct ImgButton {
     img_src_rect: Rect,
     rect: Rect,
+    up_color: Color,
+    down_color: Color,
 }
 
 const IMG_BUTTON_PADDING: f32 = 4.0;
 
 impl ImgButton {
-    pub fn new(img_src_rect: Rect, x: f32, y: f32) -> Self {
+    pub fn new(img_src_rect: Rect, x: f32, y: f32, up_color: Color, down_color: Color) -> Self {
         let rect = Rect {
             x,
             y,
             w: img_src_rect.w + IMG_BUTTON_PADDING,
             h: img_src_rect.h + IMG_BUTTON_PADDING,
         };
-        Self { img_src_rect, rect }
+        Self {
+            img_src_rect,
+            rect,
+            up_color,
+            down_color,
+        }
     }
     pub fn draw(&self, tex: Texture2D, mx: f32, my: f32) {
         let bg_color = if self.mouse_over(mx, my) {
-            LIGHTGRAY
+            self.down_color
         } else {
-            GRAY
+            self.up_color
         };
         draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, bg_color);
         draw_texture_ex(
@@ -226,16 +233,23 @@ struct ClueRow {
     heart_rem_but: ImgButton,
 }
 
+const HEART_BUT_DOWN_COL: Color = Color {
+    r: 1.0,
+    g: 0.4,
+    b: 0.4,
+    a: 1.0,
+};
+
 impl ClueRow {
     pub fn new(slots: u8) -> Self {
         Self {
             slots: vec![None; slots as usize],
             hearts: 0,
             dots: 0,
-            dot_add_but: ImgButton::new(src_rects::PLUS, 0., 0.),
-            dot_rem_but: ImgButton::new(src_rects::MINUS, 0., 0.),
-            heart_add_but: ImgButton::new(src_rects::PLUS, 0., 0.),
-            heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0.),
+            dot_add_but: ImgButton::new(src_rects::PLUS, 0., 0., GRAY, LIGHTGRAY),
+            dot_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., GRAY, LIGHTGRAY),
+            heart_add_but: ImgButton::new(src_rects::PLUS, 0., 0., RED, HEART_BUT_DOWN_COL),
+            heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., RED, HEART_BUT_DOWN_COL),
         }
     }
 }
@@ -382,8 +396,8 @@ async fn main() {
         format!("Puzzle type: {} peg", n_pegs_in_clues.value)
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = ImgButton::new(src_rects::PLUS, 180.0, 48.0);
-    let clue_rem_but = ImgButton::new(src_rects::MINUS, 210.0, 48.0);
+    let clue_add_but = ImgButton::new(src_rects::PLUS, 180.0, 48.0, GRAY, LIGHTGRAY);
+    let clue_rem_but = ImgButton::new(src_rects::MINUS, 210.0, 48.0, GRAY, LIGHTGRAY);
     let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value)];
     let mut solutions = Vec::new();

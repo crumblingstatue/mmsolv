@@ -1,6 +1,9 @@
 #![feature(decl_macro)]
 
+mod util;
+
 use std::collections::HashSet;
+use util::IncWrap;
 
 use macroquad::prelude::*;
 use mmsolv::{solve_raw, Clue, Indicator};
@@ -203,27 +206,6 @@ impl SimpleButton {
     }
 }
 
-struct IncWrap {
-    pub value: u8,
-    min: u8,
-    max: u8,
-}
-
-impl IncWrap {
-    pub fn new(min: u8, max: u8) -> Self {
-        Self {
-            value: min,
-            min,
-            max,
-        }
-    }
-    pub fn inc(&mut self) {
-        self.value += 1;
-        if self.value > self.max {
-            self.value = self.min;
-        }
-    }
-}
 struct ClueRow {
     slots: Vec<Option<mmsolv::Peg>>,
     hearts: u8,
@@ -404,8 +386,10 @@ async fn main() {
     let mut solutions = Vec::new();
     loop {
         clear_background(WHITE);
-        let tex =
-            Texture2D::from_file_with_format(include_bytes!("../../assets/spritesheet.png"), None);
+        let tex = Texture2D::from_file_with_format(
+            include_bytes!("../../../assets/spritesheet.png"),
+            None,
+        );
         let (mx, my) = mouse_position();
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {

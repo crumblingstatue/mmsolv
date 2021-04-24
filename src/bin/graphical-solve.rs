@@ -1,5 +1,4 @@
 #![feature(decl_macro)]
-#![allow(clippy::clippy::too_many_arguments)]
 
 use std::collections::HashSet;
 

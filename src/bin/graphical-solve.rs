@@ -57,18 +57,19 @@ impl Pegbug {
     }
 }
 
-const BUGS_PER_ROW: u8 = 8;
+const BUGS_PER_ROW: u8 = 3;
+const BUGS_Y_OFFSET: f32 = 176.0;
 
-fn bottom_peg(idx: usize) -> Pegbug {
+fn pickable_peg(idx: usize) -> Pegbug {
     Pegbug {
-        x: (idx % BUGS_PER_ROW as usize) as f32 * 80.,
-        y: screen_height() - (PEG_SIZE * 2.0) + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
+        x: (idx % BUGS_PER_ROW as usize) as f32 * 64.,
+        y: BUGS_Y_OFFSET + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
         id: idx as u8,
     }
 }
 
-fn bottom_pegs() -> impl Iterator<Item = Pegbug> {
-    (0..PEG_COLORS.len()).map(bottom_peg)
+fn pickable_pegs() -> impl Iterator<Item = Pegbug> {
+    (0..PEG_COLORS.len()).map(pickable_peg)
 }
 
 mod src_rects {
@@ -96,7 +97,7 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
 }
 
 fn draw_bottom_pegs(peg_tex: Texture2D) {
-    bottom_pegs().for_each(|peg| {
+    pickable_pegs().for_each(|peg| {
         draw_peg(peg_tex, peg);
     });
 }
@@ -254,7 +255,7 @@ impl ClueRow {
     }
 }
 
-const CLUE_ROW_X_OFFSET: f32 = 300.;
+const CLUE_ROW_X_OFFSET: f32 = 200.;
 const CLUE_ROW_Y_OFFSET: f32 = 16.;
 const BOX_PADDING_INNER: f32 = 4.;
 const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
@@ -393,11 +394,11 @@ async fn main() {
     let mut n_pegs_in_clues = IncWrap::new(MIN_PEGS, MAX_PEGS);
     let mut solve_msg: String = String::new();
     macro ptype_but_text() {
-        format!("Puzzle type: {} peg", n_pegs_in_clues.value)
+        format!("Type: {} peg", n_pegs_in_clues.value)
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = ImgButton::new(src_rects::PLUS, 180.0, 48.0, GRAY, LIGHTGRAY);
-    let clue_rem_but = ImgButton::new(src_rects::MINUS, 210.0, 48.0, GRAY, LIGHTGRAY);
+    let clue_add_but = ImgButton::new(src_rects::PLUS, 120.0, 48.0, GRAY, LIGHTGRAY);
+    let clue_rem_but = ImgButton::new(src_rects::MINUS, 150.0, 48.0, GRAY, LIGHTGRAY);
     let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value)];
     let mut solutions = Vec::new();
@@ -448,7 +449,7 @@ async fn main() {
                 }
             }
             if picked_peg.is_none() {
-                for peg in bottom_pegs() {
+                for peg in pickable_pegs() {
                     if peg.rect().contains(Vec2::new(mx, my)) {
                         picked_peg = Some(peg);
                     }
@@ -486,13 +487,7 @@ async fn main() {
             draw_peg(tex, *peg);
         }
         ptype_but.draw(mx, my);
-        draw_text(
-            &format!("{} clue rows", clue_rows.len()),
-            8.0,
-            64.0,
-            32.0,
-            BLACK,
-        );
+        draw_text(&format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
         clue_add_but.draw(tex, mx, my);
         clue_rem_but.draw(tex, mx, my);
         solve_but.draw(mx, my);

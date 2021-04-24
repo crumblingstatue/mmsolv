@@ -71,30 +71,23 @@ fn bottom_pegs() -> impl Iterator<Item = Pegbug> {
     (0..PEG_COLORS.len()).map(bottom_peg)
 }
 
-const PEG_SRC_RECT: Rect = Rect {
-    x: 64.,
-    y: 0.,
-    w: 58.,
-    h: 58.,
-};
-
-const DOT_SRC_RECT: Rect = Rect {
-    x: 0.,
-    y: 0.,
-    w: 21.,
-    h: 21.,
-};
-
-const HEART_SRC_RECT: Rect = Rect {
-    x: 32.,
-    y: 0.,
-    w: 23.,
-    h: 21.,
-};
+mod src_rects {
+    use macroquad::prelude::Rect;
+    macro rects($($name:ident: $x:expr, $y:expr, $w:expr, $h:expr)+) {
+        $(
+            pub const $name: Rect = Rect {x: $x as f32, y: $y as f32, w: $w as f32, h: $h as f32};
+        )+
+    }
+    rects! {
+        PEG: 64, 0, 58, 58
+        DOT: 0, 0, 21, 21
+        HEART: 32, 0, 23, 21
+    }
+}
 
 fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
     let params = DrawTextureParams {
-        source: Some(PEG_SRC_RECT),
+        source: Some(src_rects::PEG),
         ..Default::default()
     };
     draw_texture_ex(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize], params);
@@ -278,7 +271,7 @@ fn draw_clue_row(
             last_rect.y + 2.0,
             WHITE,
             DrawTextureParams {
-                source: Some(DOT_SRC_RECT),
+                source: Some(src_rects::DOT),
                 ..Default::default()
             },
         );
@@ -290,7 +283,7 @@ fn draw_clue_row(
             last_rect.y + 40.0,
             WHITE,
             DrawTextureParams {
-                source: Some(HEART_SRC_RECT),
+                source: Some(src_rects::HEART),
                 ..Default::default()
             },
         );

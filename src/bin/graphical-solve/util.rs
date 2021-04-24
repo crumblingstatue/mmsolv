@@ -1,21 +1,20 @@
-pub struct IncWrap {
-    pub value: u8,
-    min: u8,
-    max: u8,
+/// Loops over predetermined values
+pub struct ValLooper<'v> {
+    source: &'v [u8],
+    idx: usize,
 }
 
-impl IncWrap {
-    pub fn new(min: u8, max: u8) -> Self {
-        Self {
-            value: min,
-            min,
-            max,
+impl<'v> ValLooper<'v> {
+    pub fn new(source: &'v [u8]) -> Self {
+        Self { source, idx: 0 }
+    }
+    pub fn go_next(&mut self) {
+        self.idx += 1;
+        if self.idx >= self.source.len() {
+            self.idx = 0;
         }
     }
-    pub fn inc(&mut self) {
-        self.value += 1;
-        if self.value > self.max {
-            self.value = self.min;
-        }
+    pub fn value(&self) -> u8 {
+        self.source[self.idx]
     }
 }

@@ -3,7 +3,7 @@
 mod util;
 
 use std::collections::HashSet;
-use util::IncWrap;
+use util::ValLooper;
 
 use macroquad::prelude::*;
 use mmsolv::{solve_raw, Clue, Indicator};
@@ -17,9 +17,6 @@ macro colors($($r:expr,$g:expr,$b:expr;)*){
         )*
     ]
 }
-
-const MIN_PEGS: u8 = 3;
-const MAX_PEGS: u8 = 5;
 
 const PEG_COLORS: [Color; 15] = colors! {
      65, 167,  64;
@@ -373,16 +370,16 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
-    let mut n_pegs_in_clues = IncWrap::new(MIN_PEGS, MAX_PEGS);
+    let mut n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
     let mut solve_msg: String = String::new();
     macro ptype_but_text() {
-        format!("Type: {} peg", n_pegs_in_clues.value)
+        format!("Type: {} peg", n_pegs_in_clues.value())
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
     let clue_add_but = ImgButton::new(src_rects::PLUS, 120.0, 48.0, GRAY, LIGHTGRAY);
     let clue_rem_but = ImgButton::new(src_rects::MINUS, 150.0, 48.0, GRAY, LIGHTGRAY);
     let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
-    let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value)];
+    let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     loop {
         clear_background(WHITE);
@@ -394,14 +391,14 @@ async fn main() {
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
             if ptype_but.mouse_over(mx, my) {
-                n_pegs_in_clues.inc();
+                n_pegs_in_clues.go_next();
                 for row in &mut clue_rows {
-                    row.slots.resize(n_pegs_in_clues.value as usize, None);
+                    row.slots.resize(n_pegs_in_clues.value() as usize, None);
                 }
                 ptype_but.set_text(ptype_but_text!());
             }
             if clue_add_but.mouse_over(mx, my) {
-                clue_rows.push(ClueRow::new(n_pegs_in_clues.value));
+                clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
             }
             if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
@@ -419,10 +416,10 @@ async fn main() {
                 }
             }
             for row in &mut clue_rows {
-                if row.dot_add_but.mouse_over(mx, my) && row.dots < n_pegs_in_clues.value {
+                if row.dot_add_but.mouse_over(mx, my) && row.dots < n_pegs_in_clues.value() {
                     row.dots += 1;
                 }
-                if row.heart_add_but.mouse_over(mx, my) && row.hearts < n_pegs_in_clues.value {
+                if row.heart_add_but.mouse_over(mx, my) && row.hearts < n_pegs_in_clues.value() {
                     row.hearts += 1;
                 }
                 if row.dot_rem_but.mouse_over(mx, my) && row.dots > 0 {

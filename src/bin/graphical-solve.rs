@@ -82,6 +82,8 @@ mod src_rects {
         PEG: 64, 0, 58, 58
         DOT: 0, 0, 21, 21
         HEART: 32, 0, 23, 21
+        PLUS: 128, 0, 16, 16
+        MINUS: 144, 0, 16, 16
     }
 }
 
@@ -104,6 +106,46 @@ struct SimpleButton {
     text: String,
     font_size: u16,
     text_offset_y: f32,
+}
+
+struct ImgButton {
+    img_src_rect: Rect,
+    rect: Rect,
+}
+
+const IMG_BUTTON_PADDING: f32 = 4.0;
+
+impl ImgButton {
+    pub fn new(img_src_rect: Rect, x: f32, y: f32) -> Self {
+        let rect = Rect {
+            x,
+            y,
+            w: img_src_rect.w + IMG_BUTTON_PADDING,
+            h: img_src_rect.h + IMG_BUTTON_PADDING,
+        };
+        Self { img_src_rect, rect }
+    }
+    pub fn draw(&self, tex: Texture2D, mx: f32, my: f32) {
+        let bg_color = if self.mouse_over(mx, my) {
+            LIGHTGRAY
+        } else {
+            GRAY
+        };
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, bg_color);
+        draw_texture_ex(
+            tex,
+            self.rect.x + IMG_BUTTON_PADDING / 2.0,
+            self.rect.y + IMG_BUTTON_PADDING / 2.0,
+            WHITE,
+            DrawTextureParams {
+                source: Some(self.img_src_rect),
+                ..Default::default()
+            },
+        );
+    }
+    pub fn mouse_over(&self, mx: f32, my: f32) -> bool {
+        self.rect.contains(Vec2::new(mx, my))
+    }
 }
 
 const BUTTON_PADDING: f32 = 8.0;
@@ -178,10 +220,10 @@ struct ClueRow {
     slots: Vec<Option<mmsolv::Peg>>,
     hearts: u8,
     dots: u8,
-    dot_add_but: SimpleButton,
-    dot_rem_but: SimpleButton,
-    heart_add_but: SimpleButton,
-    heart_rem_but: SimpleButton,
+    dot_add_but: ImgButton,
+    dot_rem_but: ImgButton,
+    heart_add_but: ImgButton,
+    heart_rem_but: ImgButton,
 }
 
 impl ClueRow {
@@ -190,10 +232,10 @@ impl ClueRow {
             slots: vec![None; slots as usize],
             hearts: 0,
             dots: 0,
-            dot_add_but: SimpleButton::new("+".into(), 0., 0., 24),
-            dot_rem_but: SimpleButton::new("-".into(), 0., 0., 24),
-            heart_add_but: SimpleButton::new("+".into(), 0., 0., 24),
-            heart_rem_but: SimpleButton::new("-".into(), 0., 0., 24),
+            dot_add_but: ImgButton::new(src_rects::PLUS, 0., 0.),
+            dot_rem_but: ImgButton::new(src_rects::MINUS, 0., 0.),
+            heart_add_but: ImgButton::new(src_rects::PLUS, 0., 0.),
+            heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0.),
         }
     }
 }
@@ -256,14 +298,14 @@ fn draw_clue_row(
     row.dot_add_but.rect.y = last_rect.y + 8.;
     row.dot_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
     row.dot_rem_but.rect.y = last_rect.y + 8.;
-    row.dot_add_but.draw(mx, my);
-    row.dot_rem_but.draw(mx, my);
+    row.dot_add_but.draw(tex, mx, my);
+    row.dot_rem_but.draw(tex, mx, my);
     row.heart_add_but.rect.x = last_rect.x + 8. + BOX_SIZE;
     row.heart_add_but.rect.y = last_rect.y + 8. + 32.;
     row.heart_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
     row.heart_rem_but.rect.y = last_rect.y + 8. + 32.;
-    row.heart_add_but.draw(mx, my);
-    row.heart_rem_but.draw(mx, my);
+    row.heart_add_but.draw(tex, mx, my);
+    row.heart_rem_but.draw(tex, mx, my);
     for i in 0..row.dots {
         draw_texture_ex(
             tex,

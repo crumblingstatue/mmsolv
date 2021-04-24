@@ -7,14 +7,12 @@ use mmsolv::{solve_raw, Clue, Indicator};
 
 const PEG_SIZE: f32 = 64.0;
 
-macro_rules! colors {
-    ($($r:expr,$g:expr,$b:expr;)*) => {
-        [
-            $(
-            color_u8!($r, $g, $b, 255),
-            )*
-        ]
-    };
+macro colors($($r:expr,$g:expr,$b:expr;)*){
+    [
+        $(
+        color_u8!($r, $g, $b, 255),
+        )*
+    ]
 }
 
 const MIN_PEGS: u8 = 3;

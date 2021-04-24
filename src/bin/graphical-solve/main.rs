@@ -58,12 +58,14 @@ impl Pegbug {
 }
 
 const BUGS_PER_ROW: u8 = 3;
-const BUGS_Y_OFFSET: f32 = 176.0;
 
 fn pickable_peg(idx: usize) -> Pegbug {
     Pegbug {
-        x: (idx % BUGS_PER_ROW as usize) as f32 * 64.,
-        y: BUGS_Y_OFFSET + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
+        x: FREE_PEGS_RECT.x + (idx % BUGS_PER_ROW as usize) as f32 * 64.,
+        y: FREE_PEGS_RECT.y
+            + FREE_PEGS_RECT.h
+            + 8.0
+            + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
         id: idx as u8,
     }
 }
@@ -234,7 +236,7 @@ impl ClueRow {
     }
 }
 
-const CLUE_ROW_X_OFFSET: f32 = 200.;
+const CLUE_ROW_X_OFFSET: f32 = 220.;
 const CLUE_ROW_Y_OFFSET: f32 = 16.;
 const BOX_PADDING_INNER: f32 = 4.;
 const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
@@ -367,6 +369,11 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
     Ok((set.into_iter().collect::<Vec<_>>(), clues))
 }
 
+fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
+    but.rect.x = bottom_rect.x;
+    but.rect.y = bottom_rect.y + 8.0;
+}
+
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
@@ -378,9 +385,14 @@ async fn main() {
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
     let clue_add_but = ImgButton::new(src_rects::PLUS, 120.0, 48.0, GRAY, LIGHTGRAY);
     let clue_rem_but = ImgButton::new(src_rects::MINUS, 150.0, 48.0, GRAY, LIGHTGRAY);
-    let solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
+    let mut solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
+    let mut free_pegs = Vec::new();
+    macro bottom_rect() {
+        clue_rect(clue_rows.len(), 0)
+    }
+    repos_solve_but(&mut solve_but, bottom_rect!());
     loop {
         clear_background(WHITE);
         let tex = Texture2D::from_file_with_format(
@@ -399,13 +411,16 @@ async fn main() {
             }
             if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
+                repos_solve_but(&mut solve_but, bottom_rect!());
             }
             if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
+                repos_solve_but(&mut solve_but, bottom_rect!());
             }
             if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
-                    Ok((set, clues)) => {
+                    Ok((mut set, clues)) => {
+                        set.extend_from_slice(&free_pegs);
                         solutions = solve_raw(&set, &clues);
                         solve_msg = format!("{} solutions found: ", solutions.len());
                     }
@@ -435,6 +450,16 @@ async fn main() {
                         picked_peg = Some(peg);
                     }
                 }
+                let mut rem = None;
+                for (i, peg) in crate::free_pegs(&free_pegs) {
+                    if peg.rect().contains(Vec2::new(mx, my)) {
+                        picked_peg = Some(peg);
+                        rem = Some(i);
+                    }
+                }
+                if let Some(idx) = rem {
+                    free_pegs.remove(idx);
+                }
             }
         }
         if is_mouse_button_released(MouseButton::Left) {
@@ -449,6 +474,9 @@ async fn main() {
                 if let Some((row, col)) = ins_loc {
                     clue_rows[row].slots[col] = Some(peg.id);
                 }
+                if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) && free_pegs.len() < 6 {
+                    free_pegs.push(peg.id);
+                }
                 picked_peg = None;
             }
         }
@@ -460,9 +488,21 @@ async fn main() {
             tex,
         );
         draw_bottom_pegs(tex);
-        let bottom_rect = clue_rect(clue_rows.len(), 0);
-        draw_text(&solve_msg, bottom_rect.x, bottom_rect.y + 32., 32., BLACK);
-        draw_solutions(&solutions, tex, bottom_rect);
+        draw_text(
+            &solve_msg,
+            solve_but.rect.x + solve_but.rect.w + 8.0,
+            solve_but.rect.y + 20.0,
+            32.,
+            BLACK,
+        );
+        draw_solutions(&solutions, tex, bottom_rect!());
+        draw_free_pegs(
+            tex,
+            &free_pegs,
+            mx,
+            my,
+            picked_peg.map(|p| PEG_COLORS[p.id as usize]),
+        );
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
@@ -470,11 +510,76 @@ async fn main() {
         }
         ptype_but.draw(mx, my);
         draw_text(&format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
+        draw_text(
+            "Free pegs",
+            FREE_PEGS_RECT.x + 4.0,
+            FREE_PEGS_RECT.y + 24.0,
+            32.0,
+            BLACK,
+        );
         clue_add_but.draw(tex, mx, my);
         clue_rem_but.draw(tex, mx, my);
         solve_but.draw(mx, my);
 
         next_frame().await
+    }
+}
+
+fn free_pegs(pegs: &[u8]) -> impl Iterator<Item = (usize, Pegbug)> + '_ {
+    const TEXT_OFFSET: f32 = 24.0;
+    pegs.iter().enumerate().map(|(i, &peg_id)| {
+        (
+            i,
+            Pegbug {
+                x: 12.0 + (i % FREE_PEGS_MAX_PER_ROW as usize) as f32 * PEG_SIZE,
+                y: TEXT_OFFSET
+                    + FREE_PEGS_RECT.y
+                    + 8.0
+                    + (i / FREE_PEGS_MAX_PER_ROW as usize) as f32 * PEG_SIZE,
+                id: peg_id,
+            },
+        )
+    })
+}
+
+const FREE_PEGS_RECT: Rect = Rect {
+    x: 8.0,
+    y: 80.0,
+    w: 194.0,
+    h: 168.0,
+};
+
+const FREE_PEGS_MAX_PER_ROW: u8 = 3;
+
+fn draw_free_pegs(
+    peg_tex: Texture2D,
+    free_pegs: &[u8],
+    mx: f32,
+    my: f32,
+    picked_color: Option<Color>,
+) {
+    if let Some(c) = picked_color {
+        if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) {
+            draw_rectangle(
+                FREE_PEGS_RECT.x,
+                FREE_PEGS_RECT.y,
+                FREE_PEGS_RECT.w,
+                FREE_PEGS_RECT.h,
+                c,
+            );
+        }
+    }
+    draw_rectangle_lines(
+        FREE_PEGS_RECT.x,
+        FREE_PEGS_RECT.y,
+        FREE_PEGS_RECT.w,
+        FREE_PEGS_RECT.h,
+        1.0,
+        GREEN,
+    );
+
+    for (_, peg) in crate::free_pegs(free_pegs) {
+        draw_peg(peg_tex, peg);
     }
 }
 

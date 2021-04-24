@@ -474,7 +474,10 @@ async fn main() {
                 if let Some((row, col)) = ins_loc {
                     clue_rows[row].slots[col] = Some(peg.id);
                 }
-                if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) && free_pegs.len() < 6 {
+                if FREE_PEGS_RECT.contains(Vec2::new(mx, my))
+                    && free_pegs.len() < 6
+                    && !free_pegs.contains(&peg.id)
+                {
                     free_pegs.push(peg.id);
                 }
                 picked_peg = None;

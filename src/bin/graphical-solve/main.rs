@@ -460,8 +460,9 @@ async fn main() {
             tex,
         );
         draw_bottom_pegs(tex);
-        draw_text(&solve_msg, 8., 150., 32., BLACK);
-        draw_solutions(&solutions, tex);
+        let bottom_rect = clue_rect(clue_rows.len(), 0);
+        draw_text(&solve_msg, bottom_rect.x, bottom_rect.y + 32., 32., BLACK);
+        draw_solutions(&solutions, tex, bottom_rect);
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
@@ -477,14 +478,14 @@ async fn main() {
     }
 }
 
-fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D) {
+fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect) {
     for (row, sol) in solutions.iter().enumerate() {
         for (col, peg_id) in sol.iter().enumerate() {
             draw_peg(
                 peg_tex,
                 Pegbug {
-                    x: col as f32 * 68.,
-                    y: 180. + row as f32 * 68.,
+                    x: bottom_rect.x + col as f32 * 68.,
+                    y: bottom_rect.y + 64. + row as f32 * 68.,
                     id: *peg_id,
                 },
             )

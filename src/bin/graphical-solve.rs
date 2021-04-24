@@ -434,10 +434,10 @@ async fn main() {
                 }
             }
             for row in &mut clue_rows {
-                if row.dot_add_but.mouse_over(mx, my) {
+                if row.dot_add_but.mouse_over(mx, my) && row.dots < n_pegs_in_clues.value {
                     row.dots += 1;
                 }
-                if row.heart_add_but.mouse_over(mx, my) {
+                if row.heart_add_but.mouse_over(mx, my) && row.hearts < n_pegs_in_clues.value {
                     row.hearts += 1;
                 }
                 if row.dot_rem_but.mouse_over(mx, my) && row.dots > 0 {

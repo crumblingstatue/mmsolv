@@ -1,4 +1,5 @@
 #![feature(decl_macro)]
+#![allow(clippy::too_many_arguments)]
 
 mod util;
 
@@ -243,7 +244,7 @@ const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
 const BOX_VERT_DISTANCE: f32 = 8.;
 const BOX_HORIZ_DISTANCE: f32 = 8.;
 
-fn clue_rect(row: usize, col: usize, seven_peg: bool) -> Rect {
+fn clue_rect(row: usize, col: usize, seven_peg: bool, y_scroll_offset: f32) -> Rect {
     if seven_peg {
         const SEVEN_OFFSETS: [(f32, f32); 7] = [
             (0.5, 0.0),
@@ -259,14 +260,15 @@ fn clue_rect(row: usize, col: usize, seven_peg: bool) -> Rect {
             x: CLUE_ROW_X_OFFSET + SEVEN_OFFSETS[col].0 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
             y: CLUE_ROW_Y_OFFSET
                 + row as f32 * ((BOX_SIZE + BOX_VERT_DISTANCE + SEVEN_PEG_PADDING) * 3.)
-                + (SEVEN_OFFSETS[col].1 * (BOX_SIZE + BOX_VERT_DISTANCE)),
+                + (SEVEN_OFFSETS[col].1 * (BOX_SIZE + BOX_VERT_DISTANCE))
+                + y_scroll_offset,
             w: BOX_SIZE,
             h: BOX_SIZE,
         }
     } else {
         Rect {
             x: CLUE_ROW_X_OFFSET + col as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
-            y: CLUE_ROW_Y_OFFSET + row as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
+            y: CLUE_ROW_Y_OFFSET + row as f32 * (BOX_SIZE + BOX_VERT_DISTANCE) + y_scroll_offset,
             w: BOX_SIZE,
             h: BOX_SIZE,
         }
@@ -276,12 +278,16 @@ fn clue_rect(row: usize, col: usize, seven_peg: bool) -> Rect {
 fn clue_rects(
     rows: &[ClueRow],
     seven_peg: bool,
+    y_scroll_offset: f32,
 ) -> impl Iterator<Item = (Rect, usize, usize)> + '_ {
     rows.iter().enumerate().flat_map(move |(row_num, row)| {
-        row.slots
-            .iter()
-            .enumerate()
-            .map(move |(col, _)| (clue_rect(row_num, col, seven_peg), row_num, col))
+        row.slots.iter().enumerate().map(move |(col, _)| {
+            (
+                clue_rect(row_num, col, seven_peg, y_scroll_offset),
+                row_num,
+                col,
+            )
+        })
     })
 }
 
@@ -294,9 +300,10 @@ fn draw_clue_row(
     picked_color: Option<Color>,
     tex: Texture2D,
     seven_peg: bool,
+    y_scroll_offset: f32,
 ) {
     for (i, slot) in row.slots.iter().enumerate() {
-        let rect = clue_rect(row_num, i, seven_peg);
+        let rect = clue_rect(row_num, i, seven_peg, y_scroll_offset);
         if let Some(picked_color) = picked_color {
             if rect.contains(Vec2::new(mx, my)) {
                 draw_rectangle(rect.x, rect.y, rect.w, rect.h, picked_color);
@@ -315,7 +322,7 @@ fn draw_clue_row(
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
     }
     let last_rect_idx = if seven_peg { 1 } else { row.slots.len() - 1 };
-    let last_rect = clue_rect(row_num, last_rect_idx, seven_peg);
+    let last_rect = clue_rect(row_num, last_rect_idx, seven_peg, y_scroll_offset);
     row.heart_add_but.rect.x = last_rect.x + 4. + BOX_SIZE;
     row.heart_add_but.rect.y = last_rect.y + 4.;
     row.heart_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
@@ -361,9 +368,19 @@ fn draw_clue_rows(
     picked_color: Option<Color>,
     tex: Texture2D,
     seven_peg: bool,
+    y_scroll_offset: f32,
 ) {
     for (i, row) in rows.iter_mut().enumerate() {
-        draw_clue_row(i, row, mx, my, picked_color, tex, seven_peg);
+        draw_clue_row(
+            i,
+            row,
+            mx,
+            my,
+            picked_color,
+            tex,
+            seven_peg,
+            y_scroll_offset,
+        );
     }
 }
 
@@ -416,37 +433,45 @@ async fn main() {
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     let mut free_pegs = Vec::new();
+    let mut y_scroll_offset: f32 = 0.0;
+    let mut stored_y_scroll_offset: f32 = 0.0;
     macro rect_for_solve_button() {{
         let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
-        clue_rect(clue_rows.len() - 1, idx, n_pegs_in_clues.value() == 7)
+        clue_rect(
+            clue_rows.len() - 1,
+            idx,
+            n_pegs_in_clues.value() == 7,
+            y_scroll_offset,
+        )
     }}
-    repos_solve_but(&mut solve_but, rect_for_solve_button!());
+    let mut view_drag_center_y = None;
     loop {
+        repos_solve_but(&mut solve_but, rect_for_solve_button!());
         clear_background(WHITE);
         let tex = Texture2D::from_file_with_format(
             include_bytes!("../../../assets/spritesheet.png"),
             None,
         );
         let (mx, my) = mouse_position();
+        let (_, mw_y) = mouse_wheel();
+        y_scroll_offset += mw_y * 32.0;
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
+            let mut clicked_something = false;
             if ptype_but.mouse_over(mx, my) {
                 n_pegs_in_clues.go_next();
                 for row in &mut clue_rows {
                     row.slots.resize(n_pegs_in_clues.value() as usize, None);
                 }
                 ptype_but.set_text(ptype_but_text!());
-                repos_solve_but(&mut solve_but, rect_for_solve_button!());
-            }
-            if clue_add_but.mouse_over(mx, my) {
+                clicked_something = true;
+            } else if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
-                repos_solve_but(&mut solve_but, rect_for_solve_button!());
-            }
-            if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
+                clicked_something = true;
+            } else if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
-                repos_solve_but(&mut solve_but, rect_for_solve_button!());
-            }
-            if solve_but.mouse_over(mx, my) {
+                clicked_something = true;
+            } else if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
                     Ok((mut set, clues)) => {
                         set.extend_from_slice(&free_pegs);
@@ -458,29 +483,37 @@ async fn main() {
                         solutions.clear();
                     }
                 }
+                clicked_something = true;
             }
             for row in &mut clue_rows {
                 if row.dot_add_but.mouse_over(mx, my) && row.dots < n_pegs_in_clues.value() {
                     row.dots += 1;
+                    clicked_something = true;
                 }
                 if row.heart_add_but.mouse_over(mx, my) && row.hearts < n_pegs_in_clues.value() {
                     row.hearts += 1;
+                    clicked_something = true;
                 }
                 if row.dot_rem_but.mouse_over(mx, my) && row.dots > 0 {
                     row.dots -= 1;
+                    clicked_something = true;
                 }
                 if row.heart_rem_but.mouse_over(mx, my) && row.hearts > 0 {
                     row.hearts -= 1;
+                    clicked_something = true;
                 }
             }
             if picked_peg.is_none() {
                 for peg in pickable_pegs() {
                     if peg.rect().contains(Vec2::new(mx, my)) {
                         picked_peg = Some(peg);
+                        clicked_something = true;
                     }
                 }
                 let mut rem = None;
-                for (clue_rect, row, col) in clue_rects(&clue_rows, n_pegs_in_clues.value() == 7) {
+                for (clue_rect, row, col) in
+                    clue_rects(&clue_rows, n_pegs_in_clues.value() == 7, y_scroll_offset)
+                {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         picked_peg = match clue_rows.get(row) {
                             Some(clue_row) => match clue_row.slots.get(col) {
@@ -488,6 +521,7 @@ async fn main() {
                                     if !is_key_down(KeyCode::LeftControl) {
                                         rem = Some((row, col));
                                     }
+                                    clicked_something = true;
                                     Some(Pegbug {
                                         x: 0.,
                                         y: 0.,
@@ -500,6 +534,10 @@ async fn main() {
                         };
                         break;
                     }
+                }
+                if !clicked_something {
+                    view_drag_center_y = Some(my);
+                    stored_y_scroll_offset = y_scroll_offset;
                 }
                 if let Some((row, col)) = rem {
                     clue_rows[row].slots[col] = None;
@@ -516,10 +554,16 @@ async fn main() {
                 }
             }
         }
+        if let Some(view_drag_center_y_val) = view_drag_center_y {
+            y_scroll_offset = stored_y_scroll_offset + (view_drag_center_y_val - my);
+        }
         if is_mouse_button_released(MouseButton::Left) {
+            view_drag_center_y = None;
             if let Some(peg) = picked_peg {
                 let mut ins_loc = None;
-                for (clue_rect, row, col) in clue_rects(&clue_rows, n_pegs_in_clues.value() == 7) {
+                for (clue_rect, row, col) in
+                    clue_rects(&clue_rows, n_pegs_in_clues.value() == 7, y_scroll_offset)
+                {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         ins_loc = Some((row, col));
                         break;
@@ -544,6 +588,7 @@ async fn main() {
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
             tex,
             n_pegs_in_clues.value() == 7,
+            y_scroll_offset,
         );
         draw_bottom_pegs(tex);
         draw_text(
@@ -648,7 +693,7 @@ fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect) 
                 peg_tex,
                 Pegbug {
                     x: bottom_rect.x + col as f32 * 68.,
-                    y: bottom_rect.y + 64. + row as f32 * 68.,
+                    y: bottom_rect.y + 120. + row as f32 * 68.,
                     id: *peg_id,
                 },
             )

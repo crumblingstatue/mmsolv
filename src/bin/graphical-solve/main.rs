@@ -85,8 +85,8 @@ mod src_rects {
         PEG: 64, 0, 58, 58
         HEART: 0, 0, 21, 21
         DOT: 32, 0, 23, 21
-        PLUS: 128, 0, 16, 16
-        MINUS: 144, 0, 16, 16
+        PLUS: 144, 0, 24, 24
+        MINUS: 168, 0, 24, 24
     }
 }
 
@@ -290,38 +290,38 @@ fn draw_clue_row(
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
     }
     let last_rect = clue_rect(row_num, row.slots.len() - 1);
-    row.dot_add_but.rect.x = last_rect.x + 8. + BOX_SIZE;
-    row.dot_add_but.rect.y = last_rect.y + 8.;
-    row.dot_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
-    row.dot_rem_but.rect.y = last_rect.y + 8.;
-    row.dot_add_but.draw(tex, mx, my);
-    row.dot_rem_but.draw(tex, mx, my);
-    row.heart_add_but.rect.x = last_rect.x + 8. + BOX_SIZE;
-    row.heart_add_but.rect.y = last_rect.y + 8. + 32.;
-    row.heart_rem_but.rect.x = last_rect.x + 8. + BOX_SIZE + 24. + 2.;
-    row.heart_rem_but.rect.y = last_rect.y + 8. + 32.;
+    row.heart_add_but.rect.x = last_rect.x + 4. + BOX_SIZE;
+    row.heart_add_but.rect.y = last_rect.y + 4.;
+    row.heart_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
+    row.heart_rem_but.rect.y = last_rect.y + 4.;
     row.heart_add_but.draw(tex, mx, my);
     row.heart_rem_but.draw(tex, mx, my);
-    for i in 0..row.dots {
+    row.dot_add_but.rect.x = last_rect.x + 4. + BOX_SIZE;
+    row.dot_add_but.rect.y = last_rect.y + 4. + 32.;
+    row.dot_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
+    row.dot_rem_but.rect.y = last_rect.y + 4. + 32.;
+    row.dot_add_but.draw(tex, mx, my);
+    row.dot_rem_but.draw(tex, mx, my);
+    for i in 0..row.hearts {
         draw_texture_ex(
             tex,
-            last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
-            last_rect.y + 2.0,
+            last_rect.x + 16. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.y + 8.0,
             WHITE,
             DrawTextureParams {
-                source: Some(src_rects::DOT),
+                source: Some(src_rects::HEART),
                 ..Default::default()
             },
         );
     }
-    for i in 0..row.hearts {
+    for i in 0..row.dots {
         draw_texture_ex(
             tex,
-            last_rect.x + 8. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.x + 16. + BOX_SIZE + 50. + i as f32 * 24.,
             last_rect.y + 40.0,
             WHITE,
             DrawTextureParams {
-                source: Some(src_rects::HEART),
+                source: Some(src_rects::DOT),
                 ..Default::default()
             },
         );
@@ -383,8 +383,8 @@ async fn main() {
         format!("Type: {} peg", n_pegs_in_clues.value())
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = ImgButton::new(src_rects::PLUS, 120.0, 48.0, GRAY, LIGHTGRAY);
-    let clue_rem_but = ImgButton::new(src_rects::MINUS, 150.0, 48.0, GRAY, LIGHTGRAY);
+    let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
+    let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
     let mut solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();

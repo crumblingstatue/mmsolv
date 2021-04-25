@@ -243,21 +243,45 @@ const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
 const BOX_VERT_DISTANCE: f32 = 8.;
 const BOX_HORIZ_DISTANCE: f32 = 8.;
 
-fn clue_rect(row: usize, col: usize) -> Rect {
-    Rect {
-        x: CLUE_ROW_X_OFFSET + col as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
-        y: CLUE_ROW_Y_OFFSET + row as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
-        w: BOX_SIZE,
-        h: BOX_SIZE,
+fn clue_rect(row: usize, col: usize, seven_peg: bool) -> Rect {
+    if seven_peg {
+        const SEVEN_OFFSETS: [(f32, f32); 7] = [
+            (0.5, 0.0),
+            (1.5, 0.0),
+            (0.0, 1.0),
+            (1.0, 1.0),
+            (2.0, 1.0),
+            (0.5, 2.0),
+            (1.5, 2.0),
+        ];
+        const SEVEN_PEG_PADDING: f32 = 8.0;
+        Rect {
+            x: CLUE_ROW_X_OFFSET + SEVEN_OFFSETS[col].0 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
+            y: CLUE_ROW_Y_OFFSET
+                + row as f32 * ((BOX_SIZE + BOX_VERT_DISTANCE + SEVEN_PEG_PADDING) * 3.)
+                + (SEVEN_OFFSETS[col].1 * (BOX_SIZE + BOX_VERT_DISTANCE)),
+            w: BOX_SIZE,
+            h: BOX_SIZE,
+        }
+    } else {
+        Rect {
+            x: CLUE_ROW_X_OFFSET + col as f32 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
+            y: CLUE_ROW_Y_OFFSET + row as f32 * (BOX_SIZE + BOX_VERT_DISTANCE),
+            w: BOX_SIZE,
+            h: BOX_SIZE,
+        }
     }
 }
 
-fn clue_rects(rows: &[ClueRow]) -> impl Iterator<Item = (Rect, usize, usize)> + '_ {
-    rows.iter().enumerate().flat_map(|(row_num, row)| {
+fn clue_rects(
+    rows: &[ClueRow],
+    seven_peg: bool,
+) -> impl Iterator<Item = (Rect, usize, usize)> + '_ {
+    rows.iter().enumerate().flat_map(move |(row_num, row)| {
         row.slots
             .iter()
             .enumerate()
-            .map(move |(col, _)| (clue_rect(row_num, col), row_num, col))
+            .map(move |(col, _)| (clue_rect(row_num, col, seven_peg), row_num, col))
     })
 }
 
@@ -269,9 +293,10 @@ fn draw_clue_row(
     my: f32,
     picked_color: Option<Color>,
     tex: Texture2D,
+    seven_peg: bool,
 ) {
     for (i, slot) in row.slots.iter().enumerate() {
-        let rect = clue_rect(row_num, i);
+        let rect = clue_rect(row_num, i, seven_peg);
         if let Some(picked_color) = picked_color {
             if rect.contains(Vec2::new(mx, my)) {
                 draw_rectangle(rect.x, rect.y, rect.w, rect.h, picked_color);
@@ -289,7 +314,8 @@ fn draw_clue_row(
         }
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
     }
-    let last_rect = clue_rect(row_num, row.slots.len() - 1);
+    let last_rect_idx = if seven_peg { 1 } else { row.slots.len() - 1 };
+    let last_rect = clue_rect(row_num, last_rect_idx, seven_peg);
     row.heart_add_but.rect.x = last_rect.x + 4. + BOX_SIZE;
     row.heart_add_but.rect.y = last_rect.y + 4.;
     row.heart_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
@@ -334,9 +360,10 @@ fn draw_clue_rows(
     my: f32,
     picked_color: Option<Color>,
     tex: Texture2D,
+    seven_peg: bool,
 ) {
     for (i, row) in rows.iter_mut().enumerate() {
-        draw_clue_row(i, row, mx, my, picked_color, tex);
+        draw_clue_row(i, row, mx, my, picked_color, tex, seven_peg);
     }
 }
 
@@ -371,7 +398,7 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
 
 fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
     but.rect.x = bottom_rect.x;
-    but.rect.y = bottom_rect.y + 8.0;
+    but.rect.y = bottom_rect.y + 82.0;
 }
 
 #[macroquad::main("mmsolv")]
@@ -389,10 +416,11 @@ async fn main() {
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     let mut free_pegs = Vec::new();
-    macro bottom_rect() {
-        clue_rect(clue_rows.len(), 0)
-    }
-    repos_solve_but(&mut solve_but, bottom_rect!());
+    macro rect_for_solve_button() {{
+        let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
+        clue_rect(clue_rows.len() - 1, idx, n_pegs_in_clues.value() == 7)
+    }}
+    repos_solve_but(&mut solve_but, rect_for_solve_button!());
     loop {
         clear_background(WHITE);
         let tex = Texture2D::from_file_with_format(
@@ -408,14 +436,15 @@ async fn main() {
                     row.slots.resize(n_pegs_in_clues.value() as usize, None);
                 }
                 ptype_but.set_text(ptype_but_text!());
+                repos_solve_but(&mut solve_but, rect_for_solve_button!());
             }
             if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
-                repos_solve_but(&mut solve_but, bottom_rect!());
+                repos_solve_but(&mut solve_but, rect_for_solve_button!());
             }
             if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
-                repos_solve_but(&mut solve_but, bottom_rect!());
+                repos_solve_but(&mut solve_but, rect_for_solve_button!());
             }
             if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
@@ -451,7 +480,7 @@ async fn main() {
                     }
                 }
                 let mut rem = None;
-                for (clue_rect, row, col) in clue_rects(&clue_rows) {
+                for (clue_rect, row, col) in clue_rects(&clue_rows, n_pegs_in_clues.value() == 7) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         picked_peg = match clue_rows.get(row) {
                             Some(clue_row) => match clue_row.slots.get(col) {
@@ -490,7 +519,7 @@ async fn main() {
         if is_mouse_button_released(MouseButton::Left) {
             if let Some(peg) = picked_peg {
                 let mut ins_loc = None;
-                for (clue_rect, row, col) in clue_rects(&clue_rows) {
+                for (clue_rect, row, col) in clue_rects(&clue_rows, n_pegs_in_clues.value() == 7) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         ins_loc = Some((row, col));
                         break;
@@ -514,6 +543,7 @@ async fn main() {
             my,
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
             tex,
+            n_pegs_in_clues.value() == 7,
         );
         draw_bottom_pegs(tex);
         draw_text(
@@ -523,7 +553,7 @@ async fn main() {
             32.,
             BLACK,
         );
-        draw_solutions(&solutions, tex, bottom_rect!());
+        draw_solutions(&solutions, tex, rect_for_solve_button!());
         draw_free_pegs(
             tex,
             &free_pegs,

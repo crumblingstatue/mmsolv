@@ -622,6 +622,13 @@ async fn main() {
             main_y_scroll_offset,
         );
         draw_pickable_pegs(tex, left_y_scroll_offset);
+        draw_rectangle(
+            0.0,
+            0.0,
+            FREE_PEGS_RECT.x + FREE_PEGS_RECT.w,
+            FREE_PEGS_RECT.y + FREE_PEGS_RECT.h,
+            WHITE,
+        );
         draw_text(
             &solve_msg,
             solve_but.rect.x + solve_but.rect.w + 8.0,

@@ -585,6 +585,10 @@ async fn main() {
         if left_y_scroll_offset > 0.0 {
             left_y_scroll_offset = 0.0;
         }
+        let min_y_scroll_left = -((PEG_SIZE + 1.0) * 4.0);
+        if left_y_scroll_offset < min_y_scroll_left {
+            left_y_scroll_offset = min_y_scroll_left;
+        }
         if is_mouse_button_released(MouseButton::Left) {
             view_drag_center_y = None;
             left_drag_center_y = None;

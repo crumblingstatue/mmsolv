@@ -590,6 +590,20 @@ async fn main() {
         if left_y_scroll_offset < min_y_scroll_left {
             left_y_scroll_offset = min_y_scroll_left;
         }
+        draw_vert_scroll_bar(
+            MAIN_AREA_START_X - 12.,
+            FREE_PEGS_RECT.y + FREE_PEGS_RECT.h + 14.0,
+            screen_height(),
+            left_y_scroll_offset,
+            min_y_scroll_left,
+        );
+        draw_vert_scroll_bar(
+            screen_width() - 12.0,
+            12.0,
+            screen_height(),
+            -main_y_scroll_offset,
+            9000.0,
+        );
         if is_mouse_button_released(MouseButton::Left) {
             view_drag_center_y = None;
             left_drag_center_y = None;
@@ -678,6 +692,13 @@ async fn main() {
 
         next_frame().await
     }
+}
+
+fn draw_vert_scroll_bar(x: f32, start_y: f32, end_y: f32, scroll: f32, max_scroll: f32) {
+    let radius = 32.0;
+    let ratio = scroll / max_scroll;
+    let y = ratio * ((end_y - radius / 2.0) - start_y);
+    draw_circle(x, start_y + y, 8.0, BLUE);
 }
 
 fn free_pegs(pegs: &[u8]) -> impl Iterator<Item = (usize, Pegbug)> + '_ {

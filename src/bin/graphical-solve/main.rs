@@ -238,7 +238,7 @@ impl ClueRow {
     }
 }
 
-const CLUE_ROW_X_OFFSET: f32 = 220.;
+const CLUE_ROW_X_OFFSET: f32 = 232.;
 const CLUE_ROW_Y_OFFSET: f32 = 16.;
 const BOX_PADDING_INNER: f32 = 4.;
 const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
@@ -419,7 +419,7 @@ fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
     but.rect.y = bottom_rect.y + 82.0;
 }
 
-const MAIN_AREA_START_X: f32 = 210.0;
+const MAIN_AREA_START_X: f32 = CLUE_ROW_X_OFFSET - 8.0;
 
 #[macroquad::main("mmsolv")]
 async fn main() {

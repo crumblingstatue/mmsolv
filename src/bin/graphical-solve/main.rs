@@ -420,6 +420,7 @@ fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
 }
 
 const MAIN_AREA_START_X: f32 = CLUE_ROW_X_OFFSET - 8.0;
+const MAX_SOLUTIONS: usize = 99;
 
 #[macroquad::main("mmsolv")]
 async fn main() {
@@ -485,7 +486,7 @@ async fn main() {
                 match conv_mmsolv(&clue_rows) {
                     Ok((mut set, clues)) => {
                         set.extend_from_slice(&free_pegs);
-                        solutions = solve_raw(&set, &clues);
+                        solutions = solve_raw(&set, &clues).take(MAX_SOLUTIONS).collect();
                         solve_msg = format!("{} solutions found: ", solutions.len());
                     }
                     Err(e) => {

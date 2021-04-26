@@ -95,25 +95,17 @@ fn validate_guess(guess: &Pegs, clues: &[Clue]) -> bool {
 }
 
 pub fn solve(set: &Pegs, clues: &[Clue]) -> Option<String> {
-    let raw = solve_raw(set, clues);
-    raw.into_iter()
-        .next()
-        .map(|guess| String::from_utf8(guess).unwrap())
+    let mut raw = solve_raw(set, clues);
+    raw.next().map(|guess| String::from_utf8(guess).unwrap())
 }
 
-pub fn solve_raw(set: &Pegs, clues: &[Clue]) -> Vec<Vec<u8>> {
-    let mut solutions = Vec::new();
+pub fn solve_raw<'a>(set: &'a Pegs, clues: &'a [Clue]) -> impl Iterator<Item = Vec<u8>> + 'a {
     let first_clue = match clues.get(0) {
         Some(clue) => clue,
-        None => return Vec::new(),
+        None => panic!("Can't solve without clues"),
     };
     let combos = combinations::SliceCombo::new(set, first_clue.pegs.len());
-    for guess in combos {
-        if validate_guess(&guess, clues) {
-            solutions.push(guess);
-        }
-    }
-    solutions
+    combos.filter(move |guess| validate_guess(guess, clues))
 }
 
 #[test]

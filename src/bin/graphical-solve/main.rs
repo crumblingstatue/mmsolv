@@ -455,7 +455,6 @@ async fn main() {
     let tex =
         Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
     loop {
-        repos_solve_but(&mut solve_but, rect_for_solve_button!());
         clear_background(WHITE);
         let (mx, my) = mouse_position();
 
@@ -633,13 +632,6 @@ async fn main() {
             FREE_PEGS_RECT.y + FREE_PEGS_RECT.h,
             WHITE,
         );
-        draw_text(
-            &solve_msg,
-            solve_but.rect.x + solve_but.rect.w + 8.0,
-            solve_but.rect.y + 20.0,
-            32.,
-            BLACK,
-        );
         draw_solutions(&solutions, tex, rect_for_solve_button!());
         draw_free_pegs(
             tex,
@@ -664,7 +656,15 @@ async fn main() {
         );
         clue_add_but.draw(tex, mx, my);
         clue_rem_but.draw(tex, mx, my);
+        repos_solve_but(&mut solve_but, rect_for_solve_button!());
         solve_but.draw(mx, my);
+        draw_text(
+            &solve_msg,
+            solve_but.rect.x + solve_but.rect.w + 8.0,
+            solve_but.rect.y + 20.0,
+            32.,
+            BLACK,
+        );
         draw_line(
             MAIN_AREA_START_X,
             0.0,

@@ -573,10 +573,16 @@ async fn main() {
             }
         }
         if let Some(view_drag_center_y_val) = view_drag_center_y {
-            main_y_scroll_offset = stored_main_y_scroll_offset + (view_drag_center_y_val - my);
+            main_y_scroll_offset = stored_main_y_scroll_offset - (view_drag_center_y_val - my);
         }
         if let Some(left_drag_center_y_val) = left_drag_center_y {
-            left_y_scroll_offset = stored_left_y_scroll_offset + (left_drag_center_y_val - my);
+            left_y_scroll_offset = stored_left_y_scroll_offset - (left_drag_center_y_val - my);
+        }
+        if main_y_scroll_offset > 0.0 {
+            main_y_scroll_offset = 0.0;
+        }
+        if left_y_scroll_offset > 0.0 {
+            left_y_scroll_offset = 0.0;
         }
         if is_mouse_button_released(MouseButton::Left) {
             view_drag_center_y = None;

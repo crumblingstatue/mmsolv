@@ -245,17 +245,18 @@ const BOX_SIZE: f32 = PEG_SIZE + BOX_PADDING_INNER;
 const BOX_VERT_DISTANCE: f32 = 8.;
 const BOX_HORIZ_DISTANCE: f32 = 8.;
 
+const SEVEN_OFFSETS: [(f32, f32); 7] = [
+    (0.5, 0.0),
+    (1.5, 0.0),
+    (0.0, 1.0),
+    (1.0, 1.0),
+    (2.0, 1.0),
+    (0.5, 2.0),
+    (1.5, 2.0),
+];
+
 fn clue_rect(row: usize, col: usize, seven_peg: bool, y_scroll_offset: f32) -> Rect {
     if seven_peg {
-        const SEVEN_OFFSETS: [(f32, f32); 7] = [
-            (0.5, 0.0),
-            (1.5, 0.0),
-            (0.0, 1.0),
-            (1.0, 1.0),
-            (2.0, 1.0),
-            (0.5, 2.0),
-            (1.5, 2.0),
-        ];
         const SEVEN_PEG_PADDING: f32 = 8.0;
         Rect {
             x: CLUE_ROW_X_OFFSET + SEVEN_OFFSETS[col].0 * (BOX_SIZE + BOX_HORIZ_DISTANCE),
@@ -648,7 +649,12 @@ async fn main() {
             FREE_PEGS_RECT.y + FREE_PEGS_RECT.h,
             WHITE,
         );
-        draw_solutions(&solutions, tex, rect_for_solve_button!());
+        draw_solutions(
+            &solutions,
+            tex,
+            rect_for_solve_button!(),
+            n_pegs_in_clues.value() == 7,
+        );
         draw_free_pegs(
             tex,
             &free_pegs,
@@ -759,17 +765,25 @@ fn draw_free_pegs(
     }
 }
 
-fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect) {
+fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect, seven_peg: bool) {
     for (row, sol) in solutions.iter().enumerate() {
         for (col, peg_id) in sol.iter().enumerate() {
-            draw_peg(
-                peg_tex,
-                Pegbug {
-                    x: bottom_rect.x + col as f32 * 68.,
-                    y: bottom_rect.y + 120. + row as f32 * 68.,
-                    id: *peg_id,
-                },
-            )
+            let x = bottom_rect.x
+                + if seven_peg {
+                    SEVEN_OFFSETS[col as usize].0 * 68.
+                } else {
+                    col as f32 * 68.
+                };
+            let y = bottom_rect.y
+                + 120.
+                + if seven_peg {
+                    let padding_between_solutions = 24.0;
+                    row as f32 * (68. * 3. + padding_between_solutions)
+                        + SEVEN_OFFSETS[col as usize].1 * 68.
+                } else {
+                    row as f32 * 68.
+                };
+            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id })
         }
     }
 }

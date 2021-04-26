@@ -445,13 +445,11 @@ async fn main() {
         )
     }}
     let mut view_drag_center_y = None;
+    let tex =
+        Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
     loop {
         repos_solve_but(&mut solve_but, rect_for_solve_button!());
         clear_background(WHITE);
-        let tex = Texture2D::from_file_with_format(
-            include_bytes!("../../../assets/spritesheet.png"),
-            None,
-        );
         let (mx, my) = mouse_position();
         let (_, mw_y) = mouse_wheel();
         y_scroll_offset += mw_y * 32.0;

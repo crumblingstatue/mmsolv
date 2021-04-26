@@ -547,6 +547,20 @@ async fn main() {
                         break;
                     }
                 }
+                if let Some((row, col)) = rem {
+                    clue_rows[row].slots[col] = None;
+                }
+                let mut rem = None;
+                for (i, peg) in crate::free_pegs(&free_pegs) {
+                    if peg.rect().contains(Vec2::new(mx, my)) {
+                        clicked_something = true;
+                        picked_peg = Some(peg);
+                        rem = Some(i);
+                    }
+                }
+                if let Some(idx) = rem {
+                    free_pegs.remove(idx);
+                }
                 if !clicked_something {
                     if mx > MAIN_AREA_START_X {
                         view_drag_center_y = Some(my);
@@ -555,19 +569,6 @@ async fn main() {
                         left_drag_center_y = Some(my);
                         stored_left_y_scroll_offset = left_y_scroll_offset;
                     }
-                }
-                if let Some((row, col)) = rem {
-                    clue_rows[row].slots[col] = None;
-                }
-                let mut rem = None;
-                for (i, peg) in crate::free_pegs(&free_pegs) {
-                    if peg.rect().contains(Vec2::new(mx, my)) {
-                        picked_peg = Some(peg);
-                        rem = Some(i);
-                    }
-                }
-                if let Some(idx) = rem {
-                    free_pegs.remove(idx);
                 }
             }
         }

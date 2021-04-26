@@ -514,10 +514,12 @@ async fn main() {
                 }
             }
             if picked_peg.is_none() {
-                for peg in pickable_pegs(left_y_scroll_offset) {
-                    if peg.rect().contains(Vec2::new(mx, my)) {
-                        picked_peg = Some(peg);
-                        clicked_something = true;
+                if my > FREE_PEGS_RECT.y + FREE_PEGS_RECT.h {
+                    for peg in pickable_pegs(left_y_scroll_offset) {
+                        if peg.rect().contains(Vec2::new(mx, my)) {
+                            picked_peg = Some(peg);
+                            clicked_something = true;
+                        }
                     }
                 }
                 let mut rem = None;

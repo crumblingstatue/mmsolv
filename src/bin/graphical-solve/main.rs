@@ -60,10 +60,11 @@ impl Pegbug {
 
 const BUGS_PER_ROW: u8 = 3;
 
-fn pickable_peg(idx: usize) -> Pegbug {
+fn pickable_peg(idx: usize, y_offset: f32) -> Pegbug {
     Pegbug {
         x: FREE_PEGS_RECT.x + (idx % BUGS_PER_ROW as usize) as f32 * 64.,
         y: FREE_PEGS_RECT.y
+            + y_offset
             + FREE_PEGS_RECT.h
             + 8.0
             + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
@@ -71,8 +72,8 @@ fn pickable_peg(idx: usize) -> Pegbug {
     }
 }
 
-fn pickable_pegs() -> impl Iterator<Item = Pegbug> {
-    (0..PEG_COLORS.len()).map(pickable_peg)
+fn pickable_pegs(y_offset: f32) -> impl Iterator<Item = Pegbug> {
+    (0..PEG_COLORS.len()).map(move |i| pickable_peg(i, y_offset))
 }
 
 mod src_rects {
@@ -99,8 +100,8 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
     draw_texture_ex(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize], params);
 }
 
-fn draw_bottom_pegs(peg_tex: Texture2D) {
-    pickable_pegs().for_each(|peg| {
+fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32) {
+    pickable_pegs(y_offset).for_each(|peg| {
         draw_peg(peg_tex, peg);
     });
 }
@@ -418,6 +419,8 @@ fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
     but.rect.y = bottom_rect.y + 82.0;
 }
 
+const MAIN_AREA_START_X: f32 = 210.0;
+
 #[macroquad::main("mmsolv")]
 async fn main() {
     let mut picked_peg: Option<Pegbug> = None;
@@ -433,26 +436,35 @@ async fn main() {
     let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     let mut free_pegs = Vec::new();
-    let mut y_scroll_offset: f32 = 0.0;
-    let mut stored_y_scroll_offset: f32 = 0.0;
+    let mut main_y_scroll_offset: f32 = 0.0;
+    let mut stored_main_y_scroll_offset: f32 = 0.0;
+    let mut left_y_scroll_offset: f32 = 0.0;
+    let mut stored_left_y_scroll_offset: f32 = 0.0;
     macro rect_for_solve_button() {{
         let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
         clue_rect(
             clue_rows.len() - 1,
             idx,
             n_pegs_in_clues.value() == 7,
-            y_scroll_offset,
+            main_y_scroll_offset,
         )
     }}
     let mut view_drag_center_y = None;
+    let mut left_drag_center_y = None;
     let tex =
         Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
     loop {
         repos_solve_but(&mut solve_but, rect_for_solve_button!());
         clear_background(WHITE);
         let (mx, my) = mouse_position();
+
         let (_, mw_y) = mouse_wheel();
-        y_scroll_offset += mw_y * 32.0;
+        let offs = mw_y * 32.0;
+        if mx > MAIN_AREA_START_X {
+            main_y_scroll_offset += offs;
+        } else {
+            left_y_scroll_offset += offs;
+        }
         // Handle mouse pressed
         if is_mouse_button_pressed(MouseButton::Left) {
             let mut clicked_something = false;
@@ -502,16 +514,18 @@ async fn main() {
                 }
             }
             if picked_peg.is_none() {
-                for peg in pickable_pegs() {
+                for peg in pickable_pegs(left_y_scroll_offset) {
                     if peg.rect().contains(Vec2::new(mx, my)) {
                         picked_peg = Some(peg);
                         clicked_something = true;
                     }
                 }
                 let mut rem = None;
-                for (clue_rect, row, col) in
-                    clue_rects(&clue_rows, n_pegs_in_clues.value() == 7, y_scroll_offset)
-                {
+                for (clue_rect, row, col) in clue_rects(
+                    &clue_rows,
+                    n_pegs_in_clues.value() == 7,
+                    main_y_scroll_offset,
+                ) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         picked_peg = match clue_rows.get(row) {
                             Some(clue_row) => match clue_row.slots.get(col) {
@@ -534,8 +548,13 @@ async fn main() {
                     }
                 }
                 if !clicked_something {
-                    view_drag_center_y = Some(my);
-                    stored_y_scroll_offset = y_scroll_offset;
+                    if mx > MAIN_AREA_START_X {
+                        view_drag_center_y = Some(my);
+                        stored_main_y_scroll_offset = main_y_scroll_offset;
+                    } else {
+                        left_drag_center_y = Some(my);
+                        stored_left_y_scroll_offset = left_y_scroll_offset;
+                    }
                 }
                 if let Some((row, col)) = rem {
                     clue_rows[row].slots[col] = None;
@@ -553,15 +572,21 @@ async fn main() {
             }
         }
         if let Some(view_drag_center_y_val) = view_drag_center_y {
-            y_scroll_offset = stored_y_scroll_offset + (view_drag_center_y_val - my);
+            main_y_scroll_offset = stored_main_y_scroll_offset + (view_drag_center_y_val - my);
+        }
+        if let Some(left_drag_center_y_val) = left_drag_center_y {
+            left_y_scroll_offset = stored_left_y_scroll_offset + (left_drag_center_y_val - my);
         }
         if is_mouse_button_released(MouseButton::Left) {
             view_drag_center_y = None;
+            left_drag_center_y = None;
             if let Some(peg) = picked_peg {
                 let mut ins_loc = None;
-                for (clue_rect, row, col) in
-                    clue_rects(&clue_rows, n_pegs_in_clues.value() == 7, y_scroll_offset)
-                {
+                for (clue_rect, row, col) in clue_rects(
+                    &clue_rows,
+                    n_pegs_in_clues.value() == 7,
+                    main_y_scroll_offset,
+                ) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         ins_loc = Some((row, col));
                         break;
@@ -586,9 +611,9 @@ async fn main() {
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
             tex,
             n_pegs_in_clues.value() == 7,
-            y_scroll_offset,
+            main_y_scroll_offset,
         );
-        draw_bottom_pegs(tex);
+        draw_pickable_pegs(tex, left_y_scroll_offset);
         draw_text(
             &solve_msg,
             solve_but.rect.x + solve_but.rect.w + 8.0,
@@ -621,6 +646,14 @@ async fn main() {
         clue_add_but.draw(tex, mx, my);
         clue_rem_but.draw(tex, mx, my);
         solve_but.draw(mx, my);
+        draw_line(
+            MAIN_AREA_START_X,
+            0.0,
+            MAIN_AREA_START_X,
+            screen_height(),
+            2.0,
+            BLACK,
+        );
 
         next_frame().await
     }

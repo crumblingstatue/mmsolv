@@ -315,8 +315,8 @@ fn draw_clue_row(
                 tex,
                 Pegbug {
                     id: pegid,
-                    x: rect.x,
-                    y: rect.y,
+                    x: rect.x + 5.0,
+                    y: rect.y + 5.0,
                 },
             );
         }

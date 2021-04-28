@@ -1,12 +1,14 @@
 #![feature(decl_macro)]
 #![allow(clippy::too_many_arguments)]
 
+mod color;
 mod util;
 
 use std::collections::HashSet;
 use util::ValLooper;
 
 use macroquad::prelude::*;
+use miniquad::{BlendFactor, BlendState, BlendValue, Equation};
 use mmsolv::{solve_raw, Clue, Indicator};
 
 const PEG_SIZE: f32 = 64.0;
@@ -84,7 +86,7 @@ mod src_rects {
         )+
     }
     rects! {
-        PEG: 64, 0, 58, 58
+        PEG: 64, 0, 64, 64
         HEART: 0, 0, 21, 21
         DOT: 32, 0, 23, 21
         PLUS: 144, 0, 24, 24
@@ -92,17 +94,23 @@ mod src_rects {
     }
 }
 
-fn draw_peg(peg_tex: Texture2D, peg: Pegbug) {
+fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &Material) {
     let params = DrawTextureParams {
         source: Some(src_rects::PEG),
         ..Default::default()
     };
-    draw_texture_ex(peg_tex, peg.x, peg.y, PEG_COLORS[peg.id as usize], params);
+    let [body, eye, shine] = color::SCHEMES[peg.id as usize].to_rgb();
+    mat.set_uniform("r_body", body);
+    mat.set_uniform("r_eye", eye);
+    mat.set_uniform("r_eyeshine", shine);
+    gl_use_material(*mat);
+    draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params);
+    gl_use_default_material();
 }
 
-fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32) {
+fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32, mat: &Material) {
     pickable_pegs(y_offset).for_each(|peg| {
-        draw_peg(peg_tex, peg);
+        draw_peg(peg_tex, peg, mat);
     });
 }
 
@@ -303,6 +311,7 @@ fn draw_clue_row(
     tex: Texture2D,
     seven_peg: bool,
     y_scroll_offset: f32,
+    mat: &Material,
 ) {
     for (i, slot) in row.slots.iter().enumerate() {
         let rect = clue_rect(row_num, i, seven_peg, y_scroll_offset);
@@ -319,6 +328,7 @@ fn draw_clue_row(
                     x: rect.x + 5.0,
                     y: rect.y + 5.0,
                 },
+                mat,
             );
         }
         draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
@@ -371,6 +381,7 @@ fn draw_clue_rows(
     tex: Texture2D,
     seven_peg: bool,
     y_scroll_offset: f32,
+    mat: &Material,
 ) {
     for (i, row) in rows.iter_mut().enumerate() {
         draw_clue_row(
@@ -382,6 +393,7 @@ fn draw_clue_rows(
             tex,
             seven_peg,
             y_scroll_offset,
+            mat,
         );
     }
 }
@@ -455,6 +467,46 @@ async fn main() {
     let mut left_drag_center_y = None;
     let tex =
         Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
+    let mat = load_material(
+        r#"#version 100
+    attribute vec3 position;
+    attribute vec2 texcoord;
+    attribute vec4 color0;
+    varying lowp vec2 uv;
+    varying lowp vec4 color;
+    uniform mat4 Model;
+    uniform mat4 Projection;
+    void main() {
+        gl_Position = Projection * Model * vec4(position, 1);
+        color = color0 / 255.0;
+        uv = texcoord;
+    }"#,
+        include_str!("../../../assets/color_shader.glsl"),
+        MaterialParams {
+            uniforms: vec![
+                ("c_body".into(), UniformType::Float3),
+                ("r_body".into(), UniformType::Float3),
+                ("c_eye".into(), UniformType::Float3),
+                ("r_eye".into(), UniformType::Float3),
+                ("c_eyeshine".into(), UniformType::Float3),
+                ("r_eyeshine".into(), UniformType::Float3),
+            ],
+            pipeline_params: PipelineParams {
+                color_blend: Some(BlendState::new(
+                    Equation::Add,
+                    BlendFactor::Value(BlendValue::SourceAlpha),
+                    BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
+                )),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    mat.set_uniform("c_body", [1.0f32, 0.0, 0.0]);
+    mat.set_uniform("c_eye", [0.0f32, 1.0, 0.0]);
+    mat.set_uniform("c_eyeshine", [0.0f32, 0.0, 1.0]);
+
     loop {
         clear_background(WHITE);
         let (mx, my) = mouse_position();
@@ -640,8 +692,9 @@ async fn main() {
             tex,
             n_pegs_in_clues.value() == 7,
             main_y_scroll_offset,
+            &mat,
         );
-        draw_pickable_pegs(tex, left_y_scroll_offset);
+        draw_pickable_pegs(tex, left_y_scroll_offset, &mat);
         draw_rectangle(
             0.0,
             0.0,
@@ -654,6 +707,7 @@ async fn main() {
             tex,
             rect_for_solve_button!(),
             n_pegs_in_clues.value() == 7,
+            &mat,
         );
         draw_free_pegs(
             tex,
@@ -661,11 +715,12 @@ async fn main() {
             mx,
             my,
             picked_peg.map(|p| PEG_COLORS[p.id as usize]),
+            &mat,
         );
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
-            draw_peg(tex, *peg);
+            draw_peg(tex, *peg, &mat);
         }
         ptype_but.draw(mx, my);
         draw_text(&format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
@@ -739,6 +794,7 @@ fn draw_free_pegs(
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
+    mat: &Material,
 ) {
     if let Some(c) = picked_color {
         if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) {
@@ -761,11 +817,17 @@ fn draw_free_pegs(
     );
 
     for (_, peg) in crate::free_pegs(free_pegs) {
-        draw_peg(peg_tex, peg);
+        draw_peg(peg_tex, peg, mat);
     }
 }
 
-fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect, seven_peg: bool) {
+fn draw_solutions(
+    solutions: &[Vec<u8>],
+    peg_tex: Texture2D,
+    bottom_rect: Rect,
+    seven_peg: bool,
+    mat: &Material,
+) {
     for (row, sol) in solutions.iter().enumerate() {
         for (col, peg_id) in sol.iter().enumerate() {
             let x = bottom_rect.x
@@ -783,7 +845,7 @@ fn draw_solutions(solutions: &[Vec<u8>], peg_tex: Texture2D, bottom_rect: Rect, 
                 } else {
                     row as f32 * 68.
                 };
-            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id })
+            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id }, mat)
         }
     }
 }

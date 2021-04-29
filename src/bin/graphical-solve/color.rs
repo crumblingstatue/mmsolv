@@ -1,6 +1,8 @@
 //! Critters have different colors, but it's not a simple hue shift.
 //! It uses color replacement of the original red critter sprite.
 
+use macroquad::prelude::Color;
+
 type Rgb = (u8, u8, u8);
 
 pub struct Scheme {
@@ -167,5 +169,9 @@ fn cmap(colors: (u8, u8, u8)) -> Vector3f {
 impl Scheme {
     pub fn to_rgb(&self) -> [Vector3f; 3] {
         [cmap(self.skin), cmap(self.eyes), cmap(self.eyes_shine)]
+    }
+    pub fn skin_color(&self) -> Color {
+        let [r, g, b] = cmap(self.skin);
+        Color { r, g, b, a: 1.0 }
     }
 }

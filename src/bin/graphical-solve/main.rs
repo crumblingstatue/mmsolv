@@ -13,32 +13,6 @@ use mmsolv::{solve_raw, Clue, Indicator};
 
 const PEG_SIZE: f32 = 64.0;
 
-macro colors($($r:expr,$g:expr,$b:expr;)*){
-    [
-        $(
-        color_u8!($r, $g, $b, 255),
-        )*
-    ]
-}
-
-const PEG_COLORS: [Color; 15] = colors! {
-     65, 167,  64;
-    111, 131, 219;
-    245, 126, 125;
-    143, 234,  64;
-    177, 237, 238;
-     26,  26,  30;
-     11,  69, 166;
-    178,  56,  35;
-    238, 218,  77;
-    180, 121,  34;
-    168,  84, 203;
-    249, 187,  74;
-    254, 206, 239;
-    249, 247, 217;
-    122, 130, 137;
-};
-
 #[derive(Clone, Copy)]
 struct Pegbug {
     x: f32,
@@ -75,7 +49,7 @@ fn pickable_peg(idx: usize, y_offset: f32) -> Pegbug {
 }
 
 fn pickable_pegs(y_offset: f32) -> impl Iterator<Item = Pegbug> {
-    (0..PEG_COLORS.len()).map(move |i| pickable_peg(i, y_offset))
+    (0..color::SCHEMES.len()).map(move |i| pickable_peg(i, y_offset))
 }
 
 mod src_rects {
@@ -694,7 +668,7 @@ async fn main() {
             &mut clue_rows,
             mx,
             my,
-            picked_peg.map(|p| PEG_COLORS[p.id as usize]),
+            picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color()),
             tex,
             n_pegs_in_clues.value() == 7,
             main_y_scroll_offset,
@@ -720,7 +694,7 @@ async fn main() {
             &free_pegs,
             mx,
             my,
-            picked_peg.map(|p| PEG_COLORS[p.id as usize]),
+            picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color()),
             &peg_materials,
         );
         if let Some(ref mut peg) = picked_peg {

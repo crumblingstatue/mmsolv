@@ -1,5 +1,5 @@
 #version 100
-uniform sampler2D texture;
+uniform sampler2D Texture;
 uniform lowp vec3 c_body;
 uniform lowp vec3 c_eye;
 uniform lowp vec3 c_eyeshine;
@@ -10,7 +10,7 @@ varying lowp vec2 uv;
 
 void main()
 {
-	lowp vec4 pixel = texture2D(texture, uv);
+	lowp vec4 pixel = texture2D(Texture, uv);
 	lowp vec3 eps = vec3(0.009, 0.009, 0.009);
 
     if( all( greaterThanEqual(pixel, vec4(c_body - eps, 1.0)) ) && all( lessThanEqual(pixel, vec4(c_body + eps, 1.0)) ) )

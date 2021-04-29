@@ -99,6 +99,8 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &[Material]) {
         source: Some(src_rects::PEG),
         ..Default::default()
     };
+    // FIXME: Workaround for white texture bug. Draw a texture without a material first.
+    draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params.clone());
     gl_use_material(mat[peg.id as usize]);
     draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params);
     gl_use_default_material();

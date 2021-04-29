@@ -517,7 +517,17 @@ async fn main() {
                     Ok((mut set, clues)) => {
                         set.extend_from_slice(&free_pegs);
                         solutions = solve_raw(&set, &clues).take(MAX_SOLUTIONS).collect();
-                        solve_msg = format!("{} solutions found: ", solutions.len());
+                        let len_s;
+                        solve_msg = format!(
+                            "{} solution{} found",
+                            if solutions.is_empty() {
+                                "No"
+                            } else {
+                                len_s = solutions.len().to_string();
+                                &len_s
+                            },
+                            if solutions.len() > 1 { "s" } else { "" }
+                        );
                     }
                     Err(e) => {
                         solve_msg = e;

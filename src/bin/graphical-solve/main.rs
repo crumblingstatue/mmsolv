@@ -38,20 +38,26 @@ impl Pegbug {
 
 const BUGS_PER_ROW: u8 = 3;
 
-fn pickable_peg(idx: usize, y_offset: f32) -> Pegbug {
+fn pickable_peg(idx: u8, y_offset: f32) -> Pegbug {
     Pegbug {
-        x: FREE_PEGS_RECT.x + (idx % BUGS_PER_ROW as usize) as f32 * 64.,
+        x: FREE_PEGS_RECT.x + (idx % BUGS_PER_ROW) as f32 * 64.,
         y: FREE_PEGS_RECT.y
             + y_offset
             + FREE_PEGS_RECT.h
             + 8.0
-            + (idx / BUGS_PER_ROW as usize) as f32 * PEG_SIZE,
+            + (idx / BUGS_PER_ROW) as f32 * PEG_SIZE,
         id: idx as u8,
     }
 }
 
-fn pickable_pegs(y_offset: f32) -> impl Iterator<Item = Pegbug> {
-    (0..color::SCHEMES.len()).map(move |i| pickable_peg(i, y_offset))
+fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug> + '_ {
+    (0..color::SCHEMES.len() as u8).filter_map(move |i| {
+        if free_pegs.contains(&i) {
+            None
+        } else {
+            Some(pickable_peg(i, y_offset))
+        }
+    })
 }
 
 mod src_rects {
@@ -80,8 +86,8 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &[Material]) {
     gl_use_default_material();
 }
 
-fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32, mat: &[Material]) {
-    pickable_pegs(y_offset).for_each(|peg| {
+fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32, mat: &[Material], free_pegs: &[u8]) {
+    pickable_pegs(y_offset, free_pegs).for_each(|peg| {
         draw_peg(peg_tex, peg, mat);
     });
 }
@@ -456,7 +462,7 @@ async fn main() {
             }
             if picked_peg.is_none() {
                 if my > FREE_PEGS_RECT.y + FREE_PEGS_RECT.h {
-                    for peg in pickable_pegs(left_y_scroll_offset) {
+                    for peg in pickable_pegs(left_y_scroll_offset, &free_pegs) {
                         if peg.rect().contains(Vec2::new(mx, my)) {
                             picked_peg = Some(peg);
                             clicked_something = true;
@@ -582,7 +588,7 @@ async fn main() {
             main_y_scroll_offset,
             &peg_materials,
         );
-        draw_pickable_pegs(tex, left_y_scroll_offset, &peg_materials);
+        draw_pickable_pegs(tex, left_y_scroll_offset, &peg_materials, &free_pegs);
         draw_rectangle(
             0.0,
             0.0,

@@ -14,5 +14,5 @@ miniquad = "0.3.0-alpha"
 opt-level = 3
 
 [profile.release]
-lto = "thin"
+lto = true
 panic = "abort"

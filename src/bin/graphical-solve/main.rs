@@ -411,6 +411,8 @@ async fn main() {
                     row.slots.resize(n_pegs_in_clues.value() as usize, None);
                 }
                 ptype_but.set_text(ptype_but_text!());
+                solutions.clear();
+                solve_msg.clear();
                 clicked_something = true;
             } else if clue_add_but.mouse_over(mx, my) {
                 clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));

@@ -551,6 +551,16 @@ async fn main() {
             -main_y_scroll_offset,
             9000.0,
         );
+        let can_drop_free = if let Some(peg) = picked_peg {
+            FREE_PEGS_RECT.contains(Vec2::new(mx, my))
+                && free_pegs.len() < 6
+                && !free_pegs.contains(&peg.id)
+                && !clue_rows
+                    .iter()
+                    .any(|row| row.slots.iter().any(|slot| *slot == Some(peg.id)))
+        } else {
+            false
+        };
         if is_mouse_button_released(MouseButton::Left) {
             view_drag_center_y = None;
             left_drag_center_y = None;
@@ -569,10 +579,7 @@ async fn main() {
                 if let Some((row, col)) = ins_loc {
                     clue_rows[row].slots[col] = Some(peg.id);
                 }
-                if FREE_PEGS_RECT.contains(Vec2::new(mx, my))
-                    && free_pegs.len() < 6
-                    && !free_pegs.contains(&peg.id)
-                {
+                if can_drop_free {
                     free_pegs.push(peg.id);
                 }
                 picked_peg = None;
@@ -608,7 +615,11 @@ async fn main() {
             &free_pegs,
             mx,
             my,
-            picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color()),
+            if can_drop_free {
+                picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color())
+            } else {
+                None
+            },
             &peg_materials,
         );
         if let Some(ref mut peg) = picked_peg {

@@ -425,11 +425,15 @@ async fn main() {
                         solutions = solve_raw(&set, &clues).take(MAX_SOLUTIONS).collect();
                         let len_s;
                         solve_msg = format!(
-                            "{} solution{} found",
+                            "{} solution{}",
                             if solutions.is_empty() {
                                 "No"
                             } else {
-                                len_s = solutions.len().to_string();
+                                len_s = format!(
+                                    "{}{}",
+                                    solutions.len(),
+                                    if solutions.len() == 99 { "(+)" } else { "" }
+                                );
                                 &len_s
                             },
                             if solutions.len() > 1 { "s" } else { "" }

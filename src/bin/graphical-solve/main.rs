@@ -321,9 +321,9 @@ const MAX_SOLUTIONS: usize = 99;
 
 #[macroquad::main("mmsolv")]
 async fn main() {
-    let mut picked_peg: Option<Pegbug> = None;
+    let mut picked_peg = None;
     let mut n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
-    let mut solve_msg: String = String::new();
+    let mut solve_msg = String::new();
     macro ptype_but_text() {
         format!("Type: {} peg", n_pegs_in_clues.value())
     }
@@ -331,13 +331,13 @@ async fn main() {
     let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
     let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
     let mut solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
-    let mut clue_rows: Vec<ClueRow> = vec![ClueRow::new(n_pegs_in_clues.value())];
+    let mut clue_rows = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     let mut free_pegs = Vec::new();
-    let mut main_y_scroll_offset: f32 = 0.0;
-    let mut stored_main_y_scroll_offset: f32 = 0.0;
-    let mut left_y_scroll_offset: f32 = 0.0;
-    let mut stored_left_y_scroll_offset: f32 = 0.0;
+    let mut main_y_scroll_offset = 0.0;
+    let mut stored_main_y_scroll_offset = 0.0;
+    let mut left_y_scroll_offset = 0.0;
+    let mut stored_left_y_scroll_offset = 0.0;
     macro rect_for_solve_button() {{
         let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
         clue_rect(

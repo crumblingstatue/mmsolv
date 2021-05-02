@@ -1,4 +1,4 @@
-#![feature(decl_macro)]
+#![feature(decl_macro, const_fn_floating_point_arithmetic)]
 #![allow(clippy::too_many_arguments)]
 
 mod button;
@@ -81,10 +81,14 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &Material) {
         source: Some(src_rects::PEG),
         ..Default::default()
     };
-    let [body, eye, shine] = color::SCHEMES[peg.id as usize].to_rgb();
-    mat.set_uniform("r_body", body);
-    mat.set_uniform("r_eye", eye);
-    mat.set_uniform("r_eyeshine", shine);
+    let color::Scheme {
+        skin,
+        eyes,
+        eyes_shine,
+    } = color::SCHEMES[peg.id as usize];
+    mat.set_uniform("r_body", skin);
+    mat.set_uniform("r_eye", eyes);
+    mat.set_uniform("r_eyeshine", eyes_shine);
     gl_use_material(*mat);
     draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params);
     gl_use_default_material();

@@ -419,6 +419,7 @@ async fn main() {
                 free_pegs.clear();
                 solve_msg.clear();
                 clicked_something = true;
+                main_y_scroll_offset = 0.0;
             } else if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
                     Ok((mut set, clues)) => {

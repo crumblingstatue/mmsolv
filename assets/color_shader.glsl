@@ -1,8 +1,8 @@
 #version 100
 uniform sampler2D Texture;
-uniform lowp vec3 c_body;
-uniform lowp vec3 c_eye;
-uniform lowp vec3 c_eyeshine;
+const lowp vec3 c_body = vec3(1.0, 0.0, 0.0);
+const lowp vec3 c_eye = vec3(0.0, 1.0, 0.0);
+const lowp vec3 c_eyeshine = vec3(0.0, 0.0, 1.0);
 uniform lowp vec3 r_body;
 uniform lowp vec3 r_eye;
 uniform lowp vec3 r_eyeshine;

@@ -358,11 +358,8 @@ async fn main() {
         include_str!("../../../assets/color_shader.glsl"),
         MaterialParams {
             uniforms: vec![
-                ("c_body".into(), UniformType::Float3),
                 ("r_body".into(), UniformType::Float3),
-                ("c_eye".into(), UniformType::Float3),
                 ("r_eye".into(), UniformType::Float3),
-                ("c_eyeshine".into(), UniformType::Float3),
                 ("r_eyeshine".into(), UniformType::Float3),
             ],
             pipeline_params: PipelineParams {
@@ -377,9 +374,6 @@ async fn main() {
         },
     )
     .unwrap();
-    mat.set_uniform("c_body", [1.0f32, 0.0, 0.0]);
-    mat.set_uniform("c_eye", [0.0f32, 1.0, 0.0]);
-    mat.set_uniform("c_eyeshine", [0.0f32, 0.0, 1.0]);
 
     loop {
         clear_background(WHITE);

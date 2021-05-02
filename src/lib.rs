@@ -13,7 +13,7 @@
 //! A *dot* indicates a partial match. It means there is a peg bug that has the right color,
 //! but it isn't at the right location.
 //!
-//! In order for a *guess* to be correct, it must not contradict and of the *clues*.
+//! In order for a *guess* to be correct, it must not contradict any of the *clues*.
 //! For example, if a clue has a green peg at the first slot, but it has no hearts,
 //! a guess having a green peg at the first slot is not a valid solution, because it contradicts
 //! a clue.

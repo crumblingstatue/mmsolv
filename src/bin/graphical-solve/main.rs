@@ -331,7 +331,8 @@ async fn main() {
     let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
     let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
     let mut solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
-    let clear_but = SimpleButton::new("X".into(), 184.0, 30.0, 40);
+    let clear_but = SimpleButton::new("X".into(), 184.0, 44.0, 40);
+    let top_but = SimpleButton::new("^".into(), 184.0, 8.0, 40);
     let mut clue_rows = vec![ClueRow::new(n_pegs_in_clues.value())];
     let mut solutions = Vec::new();
     let mut free_pegs = Vec::new();
@@ -409,6 +410,8 @@ async fn main() {
             } else if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
                 clue_rows.pop();
                 clicked_something = true;
+            } else if top_but.mouse_over(mx, my) {
+                main_y_scroll_offset = 0.0;
             } else if clear_but.mouse_over(mx, my) {
                 clue_rows.truncate(1);
                 let row = &mut clue_rows[0];
@@ -646,6 +649,7 @@ async fn main() {
         clue_rem_but.draw(tex, mx, my);
         repos_solve_but(&mut solve_but, rect_for_solve_button!());
         solve_but.draw(mx, my);
+        top_but.draw(mx, my);
         clear_but.draw(mx, my);
         draw_text(
             &solve_msg,

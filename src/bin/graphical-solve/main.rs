@@ -415,6 +415,9 @@ async fn main() {
                 row.dots = 0;
                 row.hearts = 0;
                 row.slots.iter_mut().for_each(|slot| *slot = None);
+                solutions.clear();
+                free_pegs.clear();
+                solve_msg.clear();
                 clicked_something = true;
             } else if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {

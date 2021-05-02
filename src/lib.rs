@@ -23,6 +23,8 @@
 //! any clue, it is a valid solution.
 //!
 
+use std::convert::TryInto;
+
 mod combinations;
 
 pub type Peg = u8;
@@ -85,9 +87,42 @@ fn compare(guess: &Pegs, clue: &Pegs) -> Indicator {
     Indicator { dots, hearts }
 }
 
+fn seven_peg_any_neighbouring_same(&[p0, p1, p2, p3, p4, p5, p6]: &[Peg; 7]) -> bool {
+    //  [0][1]
+    // [2][3][4]
+    //  [5][6]
+    // Sorry...
+    p0 == p1
+        || p0 == p2
+        || p0 == p3
+        || p1 == p3
+        || p1 == p4
+        || p2 == p0
+        || p2 == p3
+        || p2 == p5
+        || p3 == p0
+        || p3 == p1
+        || p3 == p2
+        || p3 == p4
+        || p3 == p5
+        || p3 == p6
+        || p4 == p1
+        || p4 == p3
+        || p4 == p6
+        || p5 == p2
+        || p5 == p3
+        || p5 == p6
+        || p6 == p3
+        || p6 == p4
+        || p6 == p5
+}
+
 fn validate_guess(guess: &Pegs, clues: &[Clue]) -> bool {
     for clue in clues {
         if clue.indicator != compare(guess, &clue.pegs) {
+            return false;
+        }
+        if guess.len() == 7 && seven_peg_any_neighbouring_same(guess.try_into().unwrap()) {
             return false;
         }
     }

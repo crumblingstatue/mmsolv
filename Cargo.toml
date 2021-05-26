@@ -7,8 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-macroquad = "0.3.0"
-miniquad = "0.3.0-alpha"
+miniquad = "0.3.0-alpha.33"
+
+[dependencies.macroquad]
+version = "0.3.4"
+default-features = false
 
 [profile.dev.package.'*']
 opt-level = 3

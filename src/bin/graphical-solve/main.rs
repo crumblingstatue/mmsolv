@@ -5,7 +5,6 @@ mod button;
 mod color;
 mod util;
 
-use std::collections::HashSet;
 use util::ValLooper;
 
 use button::{ImgButton, SimpleButton};
@@ -282,9 +281,8 @@ fn draw_clue_rows(
     }
 }
 
-fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
+fn conv_mmsolv(rows: &[ClueRow]) -> Result<Vec<Clue>, String> {
     let mut clues = Vec::new();
-    let mut set = HashSet::new();
     for row in rows {
         let clue = Clue {
             indicator: Indicator {
@@ -295,10 +293,7 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
                 let mut pegs = Vec::new();
                 for slot in &row.slots {
                     let &val = match slot {
-                        Some(id) => {
-                            set.insert(*id);
-                            id
-                        }
+                        Some(id) => id,
                         None => return Err("Empty slot somewhere".into()),
                     };
                     pegs.push(val);
@@ -308,7 +303,7 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<(Vec<u8>, Vec<Clue>), String> {
         };
         clues.push(clue);
     }
-    Ok((set.into_iter().collect::<Vec<_>>(), clues))
+    Ok(clues)
 }
 
 fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
@@ -419,9 +414,8 @@ async fn main() {
                 main_y_scroll_offset = 0.0;
             } else if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
-                    Ok((mut set, clues)) => {
-                        set.extend_from_slice(&free_pegs);
-                        solutions = solve_raw(&set, &clues).take(MAX_SOLUTIONS).collect();
+                    Ok(clues) => {
+                        solutions = solve_raw(&free_pegs, &clues).take(MAX_SOLUTIONS).collect();
                         let len_s;
                         solve_msg = format!(
                             "{} solution{}",

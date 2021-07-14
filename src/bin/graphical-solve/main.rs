@@ -10,7 +10,7 @@ use util::ValLooper;
 use button::{ImgButton, SimpleButton};
 use macroquad::prelude::*;
 use miniquad::{BlendFactor, BlendState, BlendValue, Equation};
-use mmsolv::{solve_raw, Clue, Indicator};
+use mmsolv::{solve_bruteforce_raw, Clue, Indicator};
 
 const PEG_SIZE: f32 = 64.0;
 
@@ -415,7 +415,9 @@ async fn main() {
             } else if solve_but.mouse_over(mx, my) {
                 match conv_mmsolv(&clue_rows) {
                     Ok(clues) => {
-                        solutions = solve_raw(&free_pegs, &clues).take(MAX_SOLUTIONS).collect();
+                        solutions = solve_bruteforce_raw(&free_pegs, &clues)
+                            .take(MAX_SOLUTIONS)
+                            .collect();
                         let len_s;
                         solve_msg = format!(
                             "{} solution{}",

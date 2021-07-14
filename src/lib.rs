@@ -118,12 +118,15 @@ fn validate_guess(guess: &Pegs, clues: &[Clue]) -> bool {
     true
 }
 
-pub fn solve(free_pegs: &Pegs, clues: &[Clue]) -> Option<String> {
-    let mut raw = solve_raw(free_pegs, clues);
+pub fn solve_bruteforce(free_pegs: &Pegs, clues: &[Clue]) -> Option<String> {
+    let mut raw = solve_bruteforce_raw(free_pegs, clues);
     raw.next().map(|guess| String::from_utf8(guess).unwrap())
 }
 
-pub fn solve_raw<'a>(free_pegs: &'a Pegs, clues: &'a [Clue]) -> impl Iterator<Item = Vec<u8>> + 'a {
+pub fn solve_bruteforce_raw<'a>(
+    free_pegs: &'a Pegs,
+    clues: &'a [Clue],
+) -> impl Iterator<Item = Vec<u8>> + 'a {
     let first_clue = match clues.get(0) {
         Some(clue) => clue,
         None => panic!("Can't solve without clues"),

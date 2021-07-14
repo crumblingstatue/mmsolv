@@ -40,7 +40,7 @@ fn parse_arg(arg: &str) -> Vec<Clue> {
 
 fn main() {
     let clues = parse_arg(&std::env::args().nth(1).expect("Need string as first arg"));
-    let result = mmsolv::solve(&[], &clues);
+    let result = mmsolv::solve_bruteforce(&[], &clues);
     match result {
         Some(solution) => println!("The soution is {}", solution),
         None => println!("There is no solution. Apparently."),

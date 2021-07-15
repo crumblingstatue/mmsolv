@@ -1,3 +1,7 @@
+//! This strategy is brute-force: It generates guesses of all possible
+//! combinations of pegs, and checks each against all clues. If a generated guess doesn't contradict
+//! any clue, it is a valid solution.
+
 use crate::{combinations::SliceCombo, Clue, Indicator, Marker, Peg, Pegs};
 use std::{collections::HashSet, convert::TryInto};
 

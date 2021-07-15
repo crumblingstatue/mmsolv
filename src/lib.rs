@@ -17,11 +17,6 @@
 //! For example, if a clue has a green peg at the first slot, but it has no hearts,
 //! a guess having a green peg at the first slot is not a valid solution, because it contradicts
 //! a clue.
-//!
-//! The strategy this library employs is brute-force: It generates guesses of all possible
-//! combinations of pegs, and checks each against all clues. If a generated guess doesn't contradict
-//! any clue, it is a valid solution.
-//!
 
 pub use bruteforce::{solve_bruteforce, solve_bruteforce_raw};
 pub use short_form::parse as parse_shortform;

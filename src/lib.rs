@@ -23,9 +23,11 @@
 //! any clue, it is a valid solution.
 //!
 
+pub use short_form::parse as parse_shortform;
 use std::{collections::HashSet, convert::TryInto};
 
 mod combinations;
+mod short_form;
 
 pub type Peg = u8;
 pub type Pegs = [Peg];
@@ -139,6 +141,18 @@ pub fn solve_bruteforce_raw<'a>(
     let set: Vec<Peg> = set.into_iter().collect();
     let combos = combinations::SliceCombo::new(set, first_clue.pegs.len());
     combos.filter(move |guess| validate_guess(guess, clues))
+}
+
+#[test]
+fn test_solve() {
+    assert_eq!(
+        solve_bruteforce(
+            &[],
+            &parse_shortform("ccprg12 cyppc11 crycg13 rccgg13 yrccc03")
+        )
+        .as_deref(),
+        Some("cgrgy")
+    );
 }
 
 #[test]

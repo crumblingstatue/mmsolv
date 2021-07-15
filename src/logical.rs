@@ -1,5 +1,5 @@
 use crate::{Clue, Peg};
-use std::{collections::HashMap, fmt::Write};
+use std::collections::HashMap;
 
 fn pegs_debug(pegs: &[Peg]) {
     print!("[");
@@ -9,9 +9,19 @@ fn pegs_debug(pegs: &[Peg]) {
     println!("\u{0008}]");
 }
 
-pub fn solve_logical(free: &[Peg], clues: &[Clue]) -> (Option<Vec<u8>>, Vec<String>) {
+/// Description for what we are doing
+pub enum Desc {
+    /// Just plain text
+    Text(String),
+    /// At least this many pegs of this color must be in the solution
+    AtLeastMustBe { peg: Peg, times: u8 },
+    /// At least this many pegs of this color can not be in the solution
+    AtLeastCantBe { peg: Peg, times: u8 },
+}
+
+pub fn solve_logical(free: &[Peg], clues: &[Clue]) -> (Option<Vec<u8>>, Vec<Desc>) {
     let mut solution = None;
-    let mut steps = vec!["First, we try the replacement rule.".into()];
+    let mut descs = vec![Desc::Text("First, we try the replacement rule.".into())];
     // Try the replacement rule
     for i in 0..clues.len() {
         for j in i + 1..clues.len() {
@@ -29,34 +39,29 @@ pub fn solve_logical(free: &[Peg], clues: &[Clue]) -> (Option<Vec<u8>>, Vec<Stri
                 );
                 pegs_debug(&c1.pegs);
                 pegs_debug(&c2.pegs);
-                let mut step = format!(
-                    "Applying the replacement rule for rows {} and {}, we can deduce that:\n",
+                descs.push(Desc::Text(format!(
+                    "Applying the replacement rule for rows {} and {}, we can deduce that:",
                     i + 1,
                     j + 1
-                );
+                )));
                 // Pegs that were added must be in the solution
                 for (added_peg, times) in diff_pegs.added {
-                    writeln!(
-                        &mut step,
-                        "\tAt least {} {} must be in the solution",
-                        times, added_peg as char
-                    )
-                    .unwrap();
+                    descs.push(Desc::AtLeastMustBe {
+                        peg: added_peg,
+                        times,
+                    });
                 }
                 // Pegs that were removed can not be in the solution
                 for (removed_peg, times) in diff_pegs.removed {
-                    writeln!(
-                        &mut step,
-                        "\tAt least {} {} can not be in the solution",
-                        times, removed_peg as char
-                    )
-                    .unwrap();
+                    descs.push(Desc::AtLeastCantBe {
+                        peg: removed_peg,
+                        times,
+                    });
                 }
-                steps.push(step);
             }
         }
     }
-    (solution, steps)
+    (solution, descs)
 }
 
 struct PegsDifference {

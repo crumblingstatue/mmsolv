@@ -19,7 +19,7 @@
 //! a clue.
 
 pub use bruteforce::{solve_bruteforce, solve_bruteforce_raw};
-pub use logical::solve_logical;
+pub use logical::{solve_logical, Desc};
 pub use short_form::parse as parse_shortform;
 
 mod bruteforce;

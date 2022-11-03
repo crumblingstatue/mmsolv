@@ -19,12 +19,10 @@
 //! a clue.
 
 pub use bruteforce::{solve_bruteforce, solve_bruteforce_raw};
-pub use logical::{solve_logical, Desc};
 pub use short_form::parse as parse_shortform;
 
 mod bruteforce;
 mod combinations;
-mod logical;
 mod short_form;
 
 pub type Peg = u8;

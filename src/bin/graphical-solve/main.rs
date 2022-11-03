@@ -45,7 +45,7 @@ fn pickable_peg(idx: u8, y_offset: f32) -> Pegbug {
             + FREE_PEGS_RECT.h
             + 8.0
             + (idx / BUGS_PER_ROW) as f32 * PEG_SIZE,
-        id: idx as u8,
+        id: idx,
     }
 }
 
@@ -738,7 +738,7 @@ fn draw_solutions(
         for (col, peg_id) in sol.iter().enumerate() {
             let x = bottom_rect.x
                 + if seven_peg {
-                    SEVEN_OFFSETS[col as usize].0 * 68.
+                    SEVEN_OFFSETS[col].0 * 68.
                 } else {
                     col as f32 * 68.
                 };
@@ -746,8 +746,7 @@ fn draw_solutions(
                 + 120.
                 + if seven_peg {
                     let padding_between_solutions = 24.0;
-                    row as f32 * (68. * 3. + padding_between_solutions)
-                        + SEVEN_OFFSETS[col as usize].1 * 68.
+                    row as f32 * (68. * 3. + padding_between_solutions) + SEVEN_OFFSETS[col].1 * 68.
                 } else {
                     row as f32 * 68.
                 };

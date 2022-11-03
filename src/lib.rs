@@ -46,7 +46,7 @@ impl Indicator {
         self.dots + self.hearts
     }
     pub fn difference(&self, other: &Self) -> u8 {
-        (self.total() as i8 - other.total() as i8).abs() as u8
+        (self.total() as i8 - other.total() as i8).unsigned_abs()
     }
 }
 

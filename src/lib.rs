@@ -40,35 +40,6 @@ pub struct Indicator {
     pub hearts: u8,
 }
 
-impl Indicator {
-    /// Returns the total number of indicators (dots + hearts)
-    pub fn total(&self) -> u8 {
-        self.dots + self.hearts
-    }
-    pub fn difference(&self, other: &Self) -> u8 {
-        (self.total() as i8 - other.total() as i8).unsigned_abs()
-    }
-}
-
-#[test]
-fn test_difference() {
-    assert_eq!(
-        Indicator {
-            hearts: 10,
-            dots: 8
-        }
-        .difference(&Indicator { hearts: 4, dots: 9 }),
-        5
-    );
-    assert_eq!(
-        Indicator { hearts: 4, dots: 9 }.difference(&Indicator {
-            hearts: 10,
-            dots: 8
-        }),
-        5
-    );
-}
-
 #[derive(Copy, Clone, PartialEq)]
 enum Marker {
     None,

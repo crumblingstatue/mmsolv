@@ -214,7 +214,7 @@ fn draw_clue_row(
                 mat,
             );
         }
-        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, RED);
+        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, RED);
     }
     let last_rect_idx = if seven_peg { 1 } else { row.slots.len() - 1 };
     let last_rect = clue_rect(row_num, last_rect_idx, seven_peg, y_scroll_offset);
@@ -718,7 +718,7 @@ fn draw_free_pegs(
         FREE_PEGS_RECT.y,
         FREE_PEGS_RECT.w,
         FREE_PEGS_RECT.h,
-        1.0,
+        2.0,
         GREEN,
     );
 

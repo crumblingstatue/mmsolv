@@ -1,4 +1,3 @@
-#![feature(decl_macro)]
 #![allow(clippy::too_many_arguments)]
 
 mod button;
@@ -61,10 +60,10 @@ fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug
 
 mod src_rects {
     use macroquad::prelude::Rect;
-    macro rects($($name:ident: $x:expr, $y:expr, $w:expr, $h:expr)+) {
-        $(
+    macro_rules! rects {
+        ($($name:ident: $x:expr, $y:expr, $w:expr, $h:expr)+) => {$(
             pub const $name: Rect = Rect {x: $x as f32, y: $y as f32, w: $w as f32, h: $h as f32};
-        )+
+        )+}
     }
     rects! {
         PEG: 64, 0, 64, 64
@@ -319,8 +318,10 @@ async fn main() {
     let mut picked_peg = None;
     let mut n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
     let mut solve_msg = String::new();
-    macro ptype_but_text() {
-        format!("Type: {} peg", n_pegs_in_clues.value())
+    macro_rules! ptype_but_text {
+        () => {
+            format!("Type: {} peg", n_pegs_in_clues.value())
+        };
     }
     let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
     let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
@@ -335,15 +336,17 @@ async fn main() {
     let mut stored_main_y_scroll_offset = 0.0;
     let mut left_y_scroll_offset = 0.0;
     let mut stored_left_y_scroll_offset = 0.0;
-    macro rect_for_solve_button() {{
-        let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
-        clue_rect(
-            clue_rows.len() - 1,
-            idx,
-            n_pegs_in_clues.value() == 7,
-            main_y_scroll_offset,
-        )
-    }}
+    macro_rules! rect_for_solve_button {
+        () => {{
+            let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
+            clue_rect(
+                clue_rows.len() - 1,
+                idx,
+                n_pegs_in_clues.value() == 7,
+                main_y_scroll_offset,
+            )
+        }};
+    }
     let mut view_drag_center_y = None;
     let mut left_drag_center_y = None;
     let tex =

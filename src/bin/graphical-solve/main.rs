@@ -1,4 +1,4 @@
-#![feature(decl_macro, const_fn_floating_point_arithmetic)]
+#![feature(decl_macro)]
 #![allow(clippy::too_many_arguments)]
 
 mod button;

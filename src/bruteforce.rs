@@ -14,7 +14,7 @@ pub fn solve_bruteforce_raw<'a>(
     free_pegs: &'a Pegs,
     clues: &'a [Clue],
 ) -> impl Iterator<Item = Vec<u8>> + 'a {
-    let first_clue = match clues.get(0) {
+    let first_clue = match clues.first() {
         Some(clue) => clue,
         None => panic!("Can't solve without clues"),
     };

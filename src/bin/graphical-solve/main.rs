@@ -1,5 +1,3 @@
-#![allow(clippy::too_many_arguments)]
-
 mod button;
 mod color;
 mod util;
@@ -184,6 +182,7 @@ fn clue_rects(
 }
 
 // Also readjusts buttons
+#[expect(clippy::too_many_arguments)]
 fn draw_clue_row(
     row_num: usize,
     row: &mut ClueRow,
@@ -255,6 +254,7 @@ fn draw_clue_row(
     }
 }
 
+#[expect(clippy::too_many_arguments)]
 fn draw_clue_rows(
     rows: &mut [ClueRow],
     mx: f32,

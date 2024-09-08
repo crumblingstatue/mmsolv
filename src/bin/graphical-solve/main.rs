@@ -74,7 +74,7 @@ mod src_rects {
     }
 }
 
-fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &Material) {
+fn draw_peg(peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
     let params = DrawTextureParams {
         source: Some(src_rects::PEG),
         ..Default::default()
@@ -84,17 +84,17 @@ fn draw_peg(peg_tex: Texture2D, peg: Pegbug, mat: &Material) {
         eyes,
         eyes_shine,
     } = color::SCHEMES[peg.id as usize];
-    mat.set_uniform("r_body", skin);
-    mat.set_uniform("r_eye", eyes);
-    mat.set_uniform("r_eyeshine", eyes_shine);
-    gl_use_material(*mat);
+    mat.set_uniform_array("r_body", &skin);
+    mat.set_uniform_array("r_eye", &eyes);
+    mat.set_uniform_array("r_eyeshine", &eyes_shine);
+    gl_use_material(mat);
     draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params);
     gl_use_default_material();
 }
 
 fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32, mat: &Material, free_pegs: &[u8]) {
     pickable_pegs(y_offset, free_pegs).for_each(|peg| {
-        draw_peg(peg_tex, peg, mat);
+        draw_peg(&peg_tex, peg, mat);
     });
 }
 struct ClueRow {
@@ -190,7 +190,7 @@ fn draw_clue_row(
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
-    tex: Texture2D,
+    tex: &Texture2D,
     seven_peg: bool,
     y_scroll_offset: f32,
     mat: &Material,
@@ -260,7 +260,7 @@ fn draw_clue_rows(
     mx: f32,
     my: f32,
     picked_color: Option<Color>,
-    tex: Texture2D,
+    tex: &Texture2D,
     seven_peg: bool,
     y_scroll_offset: f32,
     mat: &Material,
@@ -352,13 +352,27 @@ async fn main() {
     let tex =
         Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
     let mat = load_material(
-        include_str!("../../../assets/vertex_shader.glsl"),
-        include_str!("../../../assets/color_shader.glsl"),
+        ShaderSource::Glsl {
+            vertex: include_str!("../../../assets/vertex_shader.glsl"),
+            fragment: include_str!("../../../assets/color_shader.glsl"),
+        },
         MaterialParams {
             uniforms: vec![
-                ("r_body".into(), UniformType::Float3),
-                ("r_eye".into(), UniformType::Float3),
-                ("r_eyeshine".into(), UniformType::Float3),
+                UniformDesc {
+                    name: "r_body".into(),
+                    uniform_type: UniformType::Float3,
+                    array_count: 1,
+                },
+                UniformDesc {
+                    name: "r_eye".into(),
+                    uniform_type: UniformType::Float3,
+                    array_count: 1,
+                },
+                UniformDesc {
+                    name: "r_eyeshine".into(),
+                    uniform_type: UniformType::Float3,
+                    array_count: 1,
+                },
             ],
             pipeline_params: PipelineParams {
                 color_blend: Some(BlendState::new(
@@ -592,12 +606,12 @@ async fn main() {
             mx,
             my,
             picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color()),
-            tex,
+            &tex,
             n_pegs_in_clues.value() == 7,
             main_y_scroll_offset,
             &mat,
         );
-        draw_pickable_pegs(tex, left_y_scroll_offset, &mat, &free_pegs);
+        draw_pickable_pegs(tex.weak_clone(), left_y_scroll_offset, &mat, &free_pegs);
         draw_rectangle(
             0.0,
             0.0,
@@ -607,13 +621,13 @@ async fn main() {
         );
         draw_solutions(
             &solutions,
-            tex,
+            tex.weak_clone(),
             rect_for_solve_button!(),
             n_pegs_in_clues.value() == 7,
             &mat,
         );
         draw_free_pegs(
-            tex,
+            tex.weak_clone(),
             &free_pegs,
             mx,
             my,
@@ -627,7 +641,7 @@ async fn main() {
         if let Some(ref mut peg) = picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
-            draw_peg(tex, *peg, &mat);
+            draw_peg(&tex, *peg, &mat);
         }
         ptype_but.draw(mx, my);
         draw_text(&format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
@@ -638,8 +652,8 @@ async fn main() {
             32.0,
             BLACK,
         );
-        clue_add_but.draw(tex, mx, my);
-        clue_rem_but.draw(tex, mx, my);
+        clue_add_but.draw(&tex, mx, my);
+        clue_rem_but.draw(&tex, mx, my);
         repos_solve_but(&mut solve_but, rect_for_solve_button!());
         solve_but.draw(mx, my);
         top_but.draw(mx, my);
@@ -726,7 +740,7 @@ fn draw_free_pegs(
     );
 
     for (_, peg) in crate::free_pegs(free_pegs) {
-        draw_peg(peg_tex, peg, mat);
+        draw_peg(&peg_tex, peg, mat);
     }
 }
 
@@ -753,7 +767,7 @@ fn draw_solutions(
                 } else {
                     row as f32 * 68.
                 };
-            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id }, mat)
+            draw_peg(&peg_tex, Pegbug { x, y, id: *peg_id }, mat)
         }
     }
 }

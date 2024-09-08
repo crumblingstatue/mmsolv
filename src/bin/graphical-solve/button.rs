@@ -31,7 +31,7 @@ impl ImgButton {
             down_color,
         }
     }
-    pub fn draw(&self, tex: Texture2D, mx: f32, my: f32) {
+    pub fn draw(&self, tex: &Texture2D, mx: f32, my: f32) {
         let bg_color = if self.mouse_over(mx, my) {
             self.down_color
         } else {

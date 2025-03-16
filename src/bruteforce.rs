@@ -5,23 +5,26 @@
 use crate::{Clue, Indicator, Marker, Peg, Pegs, combinations::SliceCombo};
 use std::{collections::HashSet, convert::TryInto};
 
+#[must_use]
 pub fn solve_bruteforce(free_pegs: &Pegs, clues: &[Clue]) -> Option<String> {
     let mut raw = solve_bruteforce_raw(free_pegs, clues);
-    raw.next().map(|guess| String::from_utf8(guess).unwrap())
+    raw.next().and_then(|guess| String::from_utf8(guess).ok())
 }
 
+/// # Panics
+///
+/// If `clues` is empty
 pub fn solve_bruteforce_raw<'a>(
     free_pegs: &'a Pegs,
     clues: &'a [Clue],
 ) -> impl Iterator<Item = Vec<u8>> + 'a {
-    let first_clue = match clues.first() {
-        Some(clue) => clue,
-        None => panic!("Can't solve without clues"),
+    let Some(first_clue) = clues.first() else {
+        panic!("Can't solve without clues");
     };
     let set: HashSet<Peg> = clues
         .iter()
-        .flat_map(|clue| clue.pegs.iter().cloned())
-        .chain(free_pegs.iter().cloned())
+        .flat_map(|clue| clue.pegs.iter().copied())
+        .chain(free_pegs.iter().copied())
         .collect();
     let set: Vec<Peg> = set.into_iter().collect();
     let combos = SliceCombo::new(set, first_clue.pegs.len());
@@ -66,7 +69,7 @@ fn compare(guess: &Pegs, clue: &Pegs) -> Indicator {
     Indicator { dots, hearts }
 }
 
-fn seven_peg_any_neighbouring_same(&[p0, p1, p2, p3, p4, p5, p6]: &[Peg; 7]) -> bool {
+fn seven_peg_any_neighbouring_same([p0, p1, p2, p3, p4, p5, p6]: [Peg; 7]) -> bool {
     //  [0][1]
     // [2][3][4]
     //  [5][6]

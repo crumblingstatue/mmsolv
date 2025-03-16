@@ -42,13 +42,12 @@ impl<T: Clone, S: Borrow<[T]>> Iterator for SliceCombo<T, S> {
                     arr[j] = slice[indice].clone();
                 }
                 return Some(arr);
-            } else {
-                self.indices[i] = 0;
-                if i == 0 {
-                    return None;
-                }
-                i -= 1;
             }
+            self.indices[i] = 0;
+            if i == 0 {
+                return None;
+            }
+            i -= 1;
         }
     }
 }

@@ -5,6 +5,7 @@ enum ParseState {
     HeartsParsed,
 }
 
+#[must_use]
 pub fn parse(arg: &str) -> Vec<Clue> {
     let mut state = ParseState::Init;
     let mut clues = Vec::new();

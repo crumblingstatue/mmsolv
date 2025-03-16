@@ -16,3 +16,6 @@ opt-level = 3
 [profile.release]
 lto = true
 panic = "abort"
+
+[lints.clippy]
+pedantic ="warn"

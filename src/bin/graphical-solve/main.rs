@@ -1,3 +1,5 @@
+#![expect(clippy::cast_precision_loss)]
+
 mod button;
 mod color;
 mod util;
@@ -36,17 +38,19 @@ const BUGS_PER_ROW: u8 = 3;
 
 fn pickable_peg(idx: u8, y_offset: f32) -> Pegbug {
     Pegbug {
-        x: FREE_PEGS_RECT.x + (idx % BUGS_PER_ROW) as f32 * 64.,
+        x: FREE_PEGS_RECT.x + f32::from(idx % BUGS_PER_ROW) * 64.,
         y: FREE_PEGS_RECT.y
             + y_offset
             + FREE_PEGS_RECT.h
             + 8.0
-            + (idx / BUGS_PER_ROW) as f32 * PEG_SIZE,
+            + f32::from(idx / BUGS_PER_ROW) * PEG_SIZE,
         id: idx,
     }
 }
 
 fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug> + '_ {
+    // `SCHEMES` isn't longer than `u8::MAX`
+    #[expect(clippy::cast_possible_truncation)]
     (0..color::SCHEMES.len() as u8).filter_map(move |i| {
         if free_pegs.contains(&i) {
             None
@@ -58,18 +62,19 @@ fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug
 
 mod src_rects {
     use macroquad::prelude::Rect;
-    macro_rules! rects {
-        ($($name:ident: $x:expr, $y:expr, $w:expr, $h:expr)+) => {$(
-            pub const $name: Rect = Rect {x: $x as f32, y: $y as f32, w: $w as f32, h: $h as f32};
-        )+}
+    const fn r(x: u8, y: u8, w: u8, h: u8) -> Rect {
+        Rect {
+            x: x as f32,
+            y: y as f32,
+            w: w as f32,
+            h: h as f32,
+        }
     }
-    rects! {
-        PEG: 64, 0, 64, 64
-        HEART: 0, 0, 21, 21
-        DOT: 32, 0, 23, 21
-        PLUS: 144, 0, 24, 24
-        MINUS: 168, 0, 24, 24
-    }
+    pub const PEG: Rect = r(64, 0, 64, 64);
+    pub const HEART: Rect = r(0, 0, 21, 21);
+    pub const DOT: Rect = r(32, 0, 23, 21);
+    pub const PLUS: Rect = r(144, 0, 24, 24);
+    pub const MINUS: Rect = r(168, 0, 24, 24);
 }
 
 fn draw_peg(peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
@@ -90,9 +95,9 @@ fn draw_peg(peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
     gl_use_default_material();
 }
 
-fn draw_pickable_pegs(peg_tex: Texture2D, y_offset: f32, mat: &Material, free_pegs: &[u8]) {
+fn draw_pickable_pegs(peg_tex: &Texture2D, y_offset: f32, mat: &Material, free_pegs: &[u8]) {
     pickable_pegs(y_offset, free_pegs).for_each(|peg| {
-        draw_peg(&peg_tex, peg, mat);
+        draw_peg(peg_tex, peg, mat);
     });
 }
 struct ClueRow {
@@ -231,7 +236,7 @@ fn draw_clue_row(
     for i in 0..row.hearts {
         draw_texture_ex(
             tex,
-            last_rect.x + 16. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 8.0,
             WHITE,
             DrawTextureParams {
@@ -243,7 +248,7 @@ fn draw_clue_row(
     for i in 0..row.dots {
         draw_texture_ex(
             tex,
-            last_rect.x + 16. + BOX_SIZE + 50. + i as f32 * 24.,
+            last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 40.0,
             WHITE,
             DrawTextureParams {
@@ -291,11 +296,10 @@ fn conv_mmsolv(rows: &[ClueRow]) -> Result<Vec<Clue>, String> {
             pegs: {
                 let mut pegs = Vec::new();
                 for slot in &row.slots {
-                    let &val = match slot {
-                        Some(id) => id,
-                        None => return Err("Empty slot somewhere".into()),
+                    let Some(val) = slot else {
+                        return Err("Empty slot somewhere".into());
                     };
-                    pegs.push(val);
+                    pegs.push(*val);
                 }
                 pegs.into_boxed_slice()
             },
@@ -315,6 +319,7 @@ const MAX_SOLUTIONS: usize = 99;
 
 #[macroquad::main("mmsolv")]
 async fn main() {
+    #![expect(clippy::too_many_lines)]
     let mut picked_peg = None;
     let mut n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
     let mut solve_msg = String::new();
@@ -611,7 +616,7 @@ async fn main() {
             main_y_scroll_offset,
             &mat,
         );
-        draw_pickable_pegs(tex.weak_clone(), left_y_scroll_offset, &mat, &free_pegs);
+        draw_pickable_pegs(&tex, left_y_scroll_offset, &mat, &free_pegs);
         draw_rectangle(
             0.0,
             0.0,
@@ -621,13 +626,13 @@ async fn main() {
         );
         draw_solutions(
             &solutions,
-            tex.weak_clone(),
+            &tex,
             rect_for_solve_button!(),
             n_pegs_in_clues.value() == 7,
             &mat,
         );
         draw_free_pegs(
-            tex.weak_clone(),
+            &tex,
             &free_pegs,
             mx,
             my,
@@ -674,7 +679,7 @@ async fn main() {
             BLACK,
         );
 
-        next_frame().await
+        next_frame().await;
     }
 }
 
@@ -712,7 +717,7 @@ const FREE_PEGS_RECT: Rect = Rect {
 const FREE_PEGS_MAX_PER_ROW: u8 = 3;
 
 fn draw_free_pegs(
-    peg_tex: Texture2D,
+    peg_tex: &Texture2D,
     free_pegs: &[u8],
     mx: f32,
     my: f32,
@@ -740,13 +745,13 @@ fn draw_free_pegs(
     );
 
     for (_, peg) in crate::free_pegs(free_pegs) {
-        draw_peg(&peg_tex, peg, mat);
+        draw_peg(peg_tex, peg, mat);
     }
 }
 
 fn draw_solutions(
     solutions: &[Vec<u8>],
-    peg_tex: Texture2D,
+    peg_tex: &Texture2D,
     bottom_rect: Rect,
     seven_peg: bool,
     mat: &Material,
@@ -767,7 +772,7 @@ fn draw_solutions(
                 } else {
                     row as f32 * 68.
                 };
-            draw_peg(&peg_tex, Pegbug { x, y, id: *peg_id }, mat)
+            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id }, mat);
         }
     }
 }

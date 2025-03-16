@@ -95,7 +95,7 @@ impl SimpleButton {
             &self.text,
             x + BUTTON_PADDING / 2.0,
             y + self.text_offset_y + BUTTON_PADDING / 2.0,
-            self.font_size as f32,
+            f32::from(self.font_size),
             BLACK,
         );
     }

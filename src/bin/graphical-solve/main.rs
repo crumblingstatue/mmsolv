@@ -317,6 +317,11 @@ fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
 const MAIN_AREA_START_X: f32 = CLUE_ROW_X_OFFSET - 8.0;
 const MAX_SOLUTIONS: usize = 99;
 
+fn first_empty_clue(rows: &mut [ClueRow]) -> Option<&mut Option<mmsolv::Peg>> {
+    rows.iter_mut()
+        .find_map(|row| row.slots.iter_mut().find(|slot| slot.is_none()))
+}
+
 #[macroquad::main("mmsolv")]
 async fn main() {
     #![expect(clippy::too_many_lines)]
@@ -538,6 +543,17 @@ async fn main() {
                     } else {
                         left_drag_center_y = Some(my);
                         stored_left_y_scroll_offset = left_y_scroll_offset;
+                    }
+                }
+            }
+        }
+        if is_mouse_button_pressed(MouseButton::Right)
+            || is_mouse_button_pressed(MouseButton::Middle)
+        {
+            for peg in pickable_pegs(left_y_scroll_offset, &free_pegs) {
+                if peg.rect().contains(Vec2::new(mx, my)) {
+                    if let Some(empty) = first_empty_clue(&mut clue_rows) {
+                        *empty = Some(peg.id);
                     }
                 }
             }

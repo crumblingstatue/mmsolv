@@ -2,7 +2,7 @@
 //! combinations of pegs, and checks each against all clues. If a generated guess doesn't contradict
 //! any clue, it is a valid solution.
 
-use crate::{combinations::SliceCombo, Clue, Indicator, Marker, Peg, Pegs};
+use crate::{Clue, Indicator, Marker, Peg, Pegs, combinations::SliceCombo};
 use std::{collections::HashSet, convert::TryInto};
 
 pub fn solve_bruteforce(free_pegs: &Pegs, clues: &[Clue]) -> Option<String> {

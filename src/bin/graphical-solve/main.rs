@@ -7,7 +7,7 @@ use util::ValLooper;
 use button::{ImgButton, SimpleButton};
 use macroquad::prelude::*;
 use miniquad::{BlendFactor, BlendState, BlendValue, Equation};
-use mmsolv::{solve_bruteforce_raw, Clue, Indicator};
+use mmsolv::{Clue, Indicator, solve_bruteforce_raw};
 
 const PEG_SIZE: f32 = 64.0;
 

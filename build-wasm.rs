@@ -11,9 +11,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             --release
             -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
     }?;
-    let target_dir: std::path::PathBuf =
+    let mut target_dir: std::path::PathBuf =
         cmd_lib::run_fun!(cargo metadata | jq -r .target_directory)?.into();
-    let target_dir = target_dir.join("wasm32-unknown-unknown/release/graphical-solve.wasm");
+    for seg in ["wasm32-unknown-unknown", "release", "graphical-solve.wasm"] {
+        target_dir.push(seg);
+    }
     cmd_lib::run_cmd!(wasm-opt -Os --strip-debug $target_dir -o graphical-solve.wasm)?;
     Ok(())
 }

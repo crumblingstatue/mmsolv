@@ -13,9 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }?;
     let mut target_dir: std::path::PathBuf =
         cmd_lib::run_fun!(cargo metadata | jq -r .target_directory)?.into();
-    for seg in ["wasm32-unknown-unknown", "release", "graphical-solve.wasm"] {
-        target_dir.push(seg);
-    }
+    target_dir.extend(["wasm32-unknown-unknown", "release", "graphical-solve.wasm"]);
     cmd_lib::run_cmd!(wasm-opt -Os --strip-debug $target_dir -o graphical-solve.wasm)?;
     Ok(())
 }

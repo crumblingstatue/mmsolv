@@ -573,7 +573,7 @@ async fn main() {
                 && !free_pegs.contains(&peg.id)
                 && !clue_rows
                     .iter()
-                    .any(|row| row.slots.iter().any(|slot| *slot == Some(peg.id)))
+                    .any(|row| row.slots.contains(&Some(peg.id)))
         } else {
             false
         };

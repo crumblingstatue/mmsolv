@@ -130,6 +130,10 @@ impl ClueRow {
             heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., RED, HEART_BUT_DOWN_COL),
         }
     }
+
+    fn full(&self) -> bool {
+        self.slots.iter().all(Option::is_some)
+    }
 }
 
 const CLUE_ROW_X_OFFSET: f32 = 232.;
@@ -318,7 +322,19 @@ fn repos_solve_but(but: &mut SimpleButton, bottom_rect: Rect) {
 const MAIN_AREA_START_X: f32 = CLUE_ROW_X_OFFSET - 8.0;
 const MAX_SOLUTIONS: usize = 99;
 
-fn first_empty_clue(rows: &mut [ClueRow]) -> Option<&mut Option<mmsolv::Peg>> {
+type ClueRowsSlice = [ClueRow];
+
+trait ClueRowsSliceExt {
+    fn full(&self) -> bool;
+}
+
+impl ClueRowsSliceExt for ClueRowsSlice {
+    fn full(&self) -> bool {
+        self.iter().all(ClueRow::full)
+    }
+}
+
+fn first_empty_clue(rows: &mut ClueRowsSlice) -> Option<&mut Option<mmsolv::Peg>> {
     rows.iter_mut()
         .find_map(|row| row.slots.iter_mut().find(|slot| slot.is_none()))
 }
@@ -551,6 +567,10 @@ async fn main() {
         if is_mouse_button_pressed(MouseButton::Right)
             || is_mouse_button_pressed(MouseButton::Middle)
         {
+            // Convenience add empty row if rows are full
+            if clue_rows.full() {
+                clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
+            }
             for peg in pickable_pegs(left_y_scroll_offset, &free_pegs) {
                 if peg.rect().contains(Vec2::new(mx, my)) {
                     if let Some(empty) = first_empty_clue(&mut clue_rows) {

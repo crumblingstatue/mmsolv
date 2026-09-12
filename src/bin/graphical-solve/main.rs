@@ -1,4 +1,5 @@
 #![expect(clippy::cast_precision_loss)]
+#![allow(clippy::collapsible_if)]
 
 mod button;
 mod color;
@@ -665,7 +666,7 @@ async fn main() {
             draw_peg(&tex, *peg, &mat);
         }
         ptype_but.draw(mx, my);
-        draw_text(&format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
+        draw_text(format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
         draw_text(
             "Free pegs",
             FREE_PEGS_RECT.x + 4.0,

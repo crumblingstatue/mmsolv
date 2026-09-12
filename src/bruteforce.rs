@@ -33,7 +33,7 @@ pub fn solve_bruteforce_raw<'a>(
 
 /// Compares `guess` against `clue`, and returns the resulting indicator
 fn compare(guess: &Pegs, clue: &Pegs) -> Indicator {
-    assert!(guess.len() == clue.len());
+    assert_eq!(guess.len(), clue.len());
     let len = guess.len();
     let mut markers = vec![Marker::None; len];
     // First determine hearts

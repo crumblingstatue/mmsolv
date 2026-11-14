@@ -1,4 +1,4 @@
-use macroquad::prelude::*;
+use frogquad::{FrogCx, prelude::*};
 
 pub struct SimpleButton {
     pub rect: Rect,
@@ -31,14 +31,22 @@ impl ImgButton {
             down_color,
         }
     }
-    pub fn draw(&self, tex: &Texture2D, mx: f32, my: f32) {
+    pub fn draw(&self, fc: &mut FrogCx, tex: &Texture2D, mx: f32, my: f32) {
         let bg_color = if self.mouse_over(mx, my) {
             self.down_color
         } else {
             self.up_color
         };
-        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, bg_color);
+        draw_rectangle(
+            fc,
+            self.rect.x,
+            self.rect.y,
+            self.rect.w,
+            self.rect.h,
+            bg_color,
+        );
         draw_texture_ex(
+            fc,
             tex,
             self.rect.x + IMG_BUTTON_PADDING / 2.0,
             self.rect.y + IMG_BUTTON_PADDING / 2.0,
@@ -57,7 +65,7 @@ impl ImgButton {
 const BUTTON_PADDING: f32 = 8.0;
 
 impl SimpleButton {
-    pub fn new(text: String, x: f32, y: f32, font_size: u16) -> Self {
+    pub fn new(fc: &mut FrogCx, text: String, x: f32, y: f32, font_size: u16) -> Self {
         let mut neu = Self {
             text: String::new(),
             rect: Rect {
@@ -69,12 +77,12 @@ impl SimpleButton {
             font_size,
             text_offset_y: 0.0,
         };
-        neu.set_text(text);
+        neu.set_text(fc, text);
         neu
     }
-    pub fn set_text(&mut self, text: String) {
+    pub fn set_text(&mut self, fc: &mut FrogCx, text: String) {
         self.text = text;
-        let tdim = measure_text(&self.text, None, self.font_size, 1.0);
+        let tdim = measure_text(&self.text, fc.default_font(), self.font_size, 1.0);
         self.rect.w = tdim.width + BUTTON_PADDING;
         self.rect.h = tdim.height + BUTTON_PADDING;
         self.text_offset_y = tdim.offset_y;
@@ -82,16 +90,17 @@ impl SimpleButton {
     pub fn mouse_over(&self, mx: f32, my: f32) -> bool {
         self.rect.contains(Vec2::new(mx, my))
     }
-    pub fn draw(&self, mx: f32, my: f32) {
+    pub fn draw(&self, fc: &mut FrogCx, mx: f32, my: f32) {
         let bg_color = if self.mouse_over(mx, my) {
             LIGHTGRAY
         } else {
             GRAY
         };
         let Rect { x, y, w, h } = self.rect;
-        draw_rectangle(x, y, w, h, bg_color);
-        draw_rectangle_lines(x, y, w, h, 1.0, BLACK);
+        draw_rectangle(fc, x, y, w, h, bg_color);
+        draw_rectangle_lines(fc, x, y, w, h, 1.0, BLACK);
         draw_text(
+            fc,
             &self.text,
             x + BUTTON_PADDING / 2.0,
             y + self.text_offset_y + BUTTON_PADDING / 2.0,

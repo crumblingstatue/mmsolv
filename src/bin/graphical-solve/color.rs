@@ -1,7 +1,7 @@
 //! Critters have different colors, but it's not a simple hue shift.
 //! It uses color replacement of the original red critter sprite.
 
-use macroquad::prelude::Color;
+use frogquad::prelude::Color;
 
 pub struct Scheme {
     pub skin: Vector3f,

@@ -8,7 +8,7 @@ mod util;
 use util::ValLooper;
 
 use button::{ImgButton, SimpleButton};
-use macroquad::prelude::*;
+use frogquad::{FrogCx, prelude::*};
 use miniquad::{BlendFactor, BlendState, BlendValue, Equation};
 use mmsolv::{Clue, Indicator, solve_bruteforce_raw};
 
@@ -62,7 +62,7 @@ fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug
 }
 
 mod src_rects {
-    use macroquad::prelude::Rect;
+    use frogquad::prelude::Rect;
     const fn r(x: u8, y: u8, w: u8, h: u8) -> Rect {
         Rect {
             x: x as f32,
@@ -78,7 +78,7 @@ mod src_rects {
     pub const MINUS: Rect = r(168, 0, 24, 24);
 }
 
-fn draw_peg(peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
+fn draw_peg(fc: &mut FrogCx, peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
     let params = DrawTextureParams {
         source: Some(src_rects::PEG),
         ..Default::default()
@@ -88,17 +88,23 @@ fn draw_peg(peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
         eyes,
         eyes_shine,
     } = color::SCHEMES[peg.id as usize];
-    mat.set_uniform_array("r_body", &skin);
-    mat.set_uniform_array("r_eye", &eyes);
-    mat.set_uniform_array("r_eyeshine", &eyes_shine);
-    gl_use_material(mat);
-    draw_texture_ex(peg_tex, peg.x, peg.y, WHITE, params);
-    gl_use_default_material();
+    mat.set_uniform_array(&mut fc.gl, "r_body", &skin);
+    mat.set_uniform_array(&mut fc.gl, "r_eye", &eyes);
+    mat.set_uniform_array(&mut fc.gl, "r_eyeshine", &eyes_shine);
+    gl_use_material(&mut fc.gl, mat);
+    draw_texture_ex(fc, peg_tex, peg.x, peg.y, WHITE, params);
+    gl_use_default_material(&mut fc.gl);
 }
 
-fn draw_pickable_pegs(peg_tex: &Texture2D, y_offset: f32, mat: &Material, free_pegs: &[u8]) {
+fn draw_pickable_pegs(
+    fc: &mut FrogCx,
+    peg_tex: &Texture2D,
+    y_offset: f32,
+    mat: &Material,
+    free_pegs: &[u8],
+) {
     pickable_pegs(y_offset, free_pegs).for_each(|peg| {
-        draw_peg(peg_tex, peg, mat);
+        draw_peg(fc, peg_tex, peg, mat);
     });
 }
 struct ClueRow {
@@ -194,6 +200,7 @@ fn clue_rects(
 // Also readjusts buttons
 #[expect(clippy::too_many_arguments)]
 fn draw_clue_row(
+    fc: &mut FrogCx,
     row_num: usize,
     row: &mut ClueRow,
     mx: f32,
@@ -208,11 +215,12 @@ fn draw_clue_row(
         let rect = clue_rect(row_num, i, seven_peg, y_scroll_offset);
         if let Some(picked_color) = picked_color {
             if rect.contains(Vec2::new(mx, my)) {
-                draw_rectangle(rect.x, rect.y, rect.w, rect.h, picked_color);
+                draw_rectangle(fc, rect.x, rect.y, rect.w, rect.h, picked_color);
             }
         }
         if let Some(pegid) = *slot {
             draw_peg(
+                fc,
                 tex,
                 Pegbug {
                     id: pegid,
@@ -222,7 +230,7 @@ fn draw_clue_row(
                 mat,
             );
         }
-        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, RED);
+        draw_rectangle_lines(fc, rect.x, rect.y, rect.w, rect.h, 2.0, RED);
     }
     let last_rect_idx = if seven_peg { 1 } else { row.slots.len() - 1 };
     let last_rect = clue_rect(row_num, last_rect_idx, seven_peg, y_scroll_offset);
@@ -230,16 +238,17 @@ fn draw_clue_row(
     row.heart_add_but.rect.y = last_rect.y + 4.;
     row.heart_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
     row.heart_rem_but.rect.y = last_rect.y + 4.;
-    row.heart_add_but.draw(tex, mx, my);
-    row.heart_rem_but.draw(tex, mx, my);
+    row.heart_add_but.draw(fc, tex, mx, my);
+    row.heart_rem_but.draw(fc, tex, mx, my);
     row.dot_add_but.rect.x = last_rect.x + 4. + BOX_SIZE;
     row.dot_add_but.rect.y = last_rect.y + 4. + 32.;
     row.dot_rem_but.rect.x = last_rect.x + 4. + BOX_SIZE + 32.;
     row.dot_rem_but.rect.y = last_rect.y + 4. + 32.;
-    row.dot_add_but.draw(tex, mx, my);
-    row.dot_rem_but.draw(tex, mx, my);
+    row.dot_add_but.draw(fc, tex, mx, my);
+    row.dot_rem_but.draw(fc, tex, mx, my);
     for i in 0..row.hearts {
         draw_texture_ex(
+            fc,
             tex,
             last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 8.0,
@@ -252,6 +261,7 @@ fn draw_clue_row(
     }
     for i in 0..row.dots {
         draw_texture_ex(
+            fc,
             tex,
             last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 40.0,
@@ -266,6 +276,7 @@ fn draw_clue_row(
 
 #[expect(clippy::too_many_arguments)]
 fn draw_clue_rows(
+    fc: &mut FrogCx,
     rows: &mut [ClueRow],
     mx: f32,
     my: f32,
@@ -277,6 +288,7 @@ fn draw_clue_rows(
 ) {
     for (i, row) in rows.iter_mut().enumerate() {
         draw_clue_row(
+            fc,
             i,
             row,
             mx,
@@ -339,158 +351,207 @@ fn first_empty_clue(rows: &mut ClueRowsSlice) -> Option<&mut Option<mmsolv::Peg>
         .find_map(|row| row.slots.iter_mut().find(|slot| slot.is_none()))
 }
 
-#[macroquad::main("mmsolv")]
-async fn main() {
-    #![expect(clippy::too_many_lines)]
-    let mut picked_peg = None;
-    let mut n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
-    let mut solve_msg = String::new();
-    macro_rules! ptype_but_text {
-        () => {
-            format!("Type: {} peg", n_pegs_in_clues.value())
-        };
-    }
-    let mut ptype_but = SimpleButton::new(ptype_but_text!(), 8.0, 8.0, 32);
-    let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
-    let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
-    let mut solve_but = SimpleButton::new("Solve".into(), 8.0, 96.0, 32);
-    let clear_but = SimpleButton::new("X".into(), 184.0, 44.0, 40);
-    let top_but = SimpleButton::new("^".into(), 184.0, 8.0, 40);
-    let mut clue_rows = vec![ClueRow::new(n_pegs_in_clues.value())];
-    let mut solutions = Vec::new();
-    let mut free_pegs = Vec::new();
-    let mut main_y_scroll_offset = 0.0;
-    let mut stored_main_y_scroll_offset = 0.0;
-    let mut left_y_scroll_offset = 0.0;
-    let mut stored_left_y_scroll_offset = 0.0;
-    macro_rules! rect_for_solve_button {
-        () => {{
-            let idx = if n_pegs_in_clues.value() == 7 { 5 } else { 0 };
-            clue_rect(
-                clue_rows.len() - 1,
-                idx,
-                n_pegs_in_clues.value() == 7,
-                main_y_scroll_offset,
-            )
-        }};
-    }
-    let mut view_drag_center_y = None;
-    let mut left_drag_center_y = None;
-    let tex =
-        Texture2D::from_file_with_format(include_bytes!("../../../assets/spritesheet.png"), None);
-    let mat = load_material(
-        ShaderSource::Glsl {
-            vertex: include_str!("../../../assets/vertex_shader.glsl"),
-            fragment: include_str!("../../../assets/color_shader.glsl"),
-        },
-        MaterialParams {
-            uniforms: vec![
-                UniformDesc {
-                    name: "r_body".into(),
-                    uniform_type: UniformType::Float3,
-                    array_count: 1,
+struct SolveApp {
+    main_y_scroll_offset: f32,
+    left_y_scroll_offset: f32,
+    ptype_but: SimpleButton,
+    n_pegs_in_clues: ValLooper<'static>,
+    solve_msg: String,
+    solutions: Vec<Vec<u8>>,
+    clue_add_but: ImgButton,
+    clue_rows: Vec<ClueRow>,
+    clue_rem_but: ImgButton,
+    top_but: SimpleButton,
+    clear_but: SimpleButton,
+    solve_but: SimpleButton,
+    free_pegs: Vec<u8>,
+    picked_peg: Option<Pegbug>,
+    view_drag_center_y: Option<f32>,
+    stored_main_y_scroll_offset: f32,
+    left_drag_center_y: Option<f32>,
+    stored_left_y_scroll_offset: f32,
+    tex: Texture2D,
+    mat: Material,
+}
+impl SolveApp {
+    fn new(fc: &mut frogquad::FrogCx) -> Self {
+        let picked_peg = None;
+        let n_pegs_in_clues = ValLooper::new(&[3, 4, 5, 7]);
+        let solve_msg = String::new();
+        let ptype_but = SimpleButton::new(
+            fc,
+            format!("Type: {} peg", n_pegs_in_clues.value()),
+            8.0,
+            8.0,
+            32,
+        );
+        let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
+        let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
+        let solve_but = SimpleButton::new(fc, "Solve".into(), 8.0, 96.0, 32);
+        let clear_but = SimpleButton::new(fc, "X".into(), 184.0, 44.0, 40);
+        let top_but = SimpleButton::new(fc, "^".into(), 184.0, 8.0, 40);
+        let clue_rows = vec![ClueRow::new(n_pegs_in_clues.value())];
+        let solutions = Vec::new();
+        let free_pegs = Vec::new();
+        let main_y_scroll_offset = 0.0;
+        let stored_main_y_scroll_offset = 0.0;
+        let left_y_scroll_offset = 0.0;
+        let stored_left_y_scroll_offset = 0.0;
+        let view_drag_center_y = None;
+        let left_drag_center_y = None;
+        let tex = Texture2D::from_file_with_format(
+            fc,
+            include_bytes!("../../../assets/spritesheet.png"),
+            None,
+        );
+        let mat = load_material(
+            fc,
+            ShaderSource::Glsl {
+                vertex: include_str!("../../../assets/vertex_shader.glsl"),
+                fragment: include_str!("../../../assets/color_shader.glsl"),
+            },
+            MaterialParams {
+                uniforms: vec![
+                    UniformDesc {
+                        name: "r_body".into(),
+                        uniform_type: UniformType::Float3,
+                        array_count: 1,
+                    },
+                    UniformDesc {
+                        name: "r_eye".into(),
+                        uniform_type: UniformType::Float3,
+                        array_count: 1,
+                    },
+                    UniformDesc {
+                        name: "r_eyeshine".into(),
+                        uniform_type: UniformType::Float3,
+                        array_count: 1,
+                    },
+                ],
+                pipeline_params: PipelineParams {
+                    color_blend: Some(BlendState::new(
+                        Equation::Add,
+                        BlendFactor::Value(BlendValue::SourceAlpha),
+                        BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
+                    )),
+                    ..Default::default()
                 },
-                UniformDesc {
-                    name: "r_eye".into(),
-                    uniform_type: UniformType::Float3,
-                    array_count: 1,
-                },
-                UniformDesc {
-                    name: "r_eyeshine".into(),
-                    uniform_type: UniformType::Float3,
-                    array_count: 1,
-                },
-            ],
-            pipeline_params: PipelineParams {
-                color_blend: Some(BlendState::new(
-                    Equation::Add,
-                    BlendFactor::Value(BlendValue::SourceAlpha),
-                    BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
-                )),
                 ..Default::default()
             },
-            ..Default::default()
-        },
-    )
-    .unwrap();
+        )
+        .unwrap();
+        Self {
+            main_y_scroll_offset,
+            left_y_scroll_offset,
+            ptype_but,
+            n_pegs_in_clues,
+            solve_msg,
+            solutions,
+            clue_add_but,
+            clue_rows,
+            clue_rem_but,
+            top_but,
+            clear_but,
+            solve_but,
+            free_pegs,
+            picked_peg,
+            view_drag_center_y,
+            stored_main_y_scroll_offset,
+            left_drag_center_y,
+            stored_left_y_scroll_offset,
+            tex,
+            mat,
+        }
+    }
+}
 
-    loop {
-        clear_background(WHITE);
-        let (mx, my) = mouse_position();
+impl frogquad::App for SolveApp {
+    #![expect(clippy::too_many_lines)]
+    fn update(&mut self, fc: &mut frogquad::FrogCx) {
+        clear_background(fc, WHITE);
+        let (mx, my) = mouse_position(fc);
 
-        let (_, mw_y) = mouse_wheel();
+        let (_, mw_y) = mouse_wheel(fc);
         let offs = mw_y * 32.0;
         if mx > MAIN_AREA_START_X {
-            main_y_scroll_offset += offs;
+            self.main_y_scroll_offset += offs;
         } else {
-            left_y_scroll_offset += offs;
+            self.left_y_scroll_offset += offs;
         }
         // Handle mouse pressed
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_pressed(fc, MouseButton::Left) {
             let mut clicked_something = false;
-            if ptype_but.mouse_over(mx, my) {
-                n_pegs_in_clues.go_next();
-                for row in &mut clue_rows {
-                    row.slots.resize(n_pegs_in_clues.value() as usize, None);
+            if self.ptype_but.mouse_over(mx, my) {
+                self.n_pegs_in_clues.go_next();
+                for row in &mut self.clue_rows {
+                    row.slots
+                        .resize(self.n_pegs_in_clues.value() as usize, None);
                 }
-                ptype_but.set_text(ptype_but_text!());
-                solutions.clear();
-                solve_msg.clear();
+                self.ptype_but
+                    .set_text(fc, format!("Type: {} peg", self.n_pegs_in_clues.value()));
+                self.solutions.clear();
+                self.solve_msg.clear();
                 clicked_something = true;
-            } else if clue_add_but.mouse_over(mx, my) {
-                clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
+            } else if self.clue_add_but.mouse_over(mx, my) {
+                self.clue_rows
+                    .push(ClueRow::new(self.n_pegs_in_clues.value()));
                 clicked_something = true;
-            } else if clue_rem_but.mouse_over(mx, my) && clue_rows.len() > 1 {
-                clue_rows.pop();
+            } else if self.clue_rem_but.mouse_over(mx, my) && self.clue_rows.len() > 1 {
+                self.clue_rows.pop();
                 clicked_something = true;
-            } else if top_but.mouse_over(mx, my) {
-                main_y_scroll_offset = 0.0;
-            } else if clear_but.mouse_over(mx, my) {
-                clue_rows.truncate(1);
-                let row = &mut clue_rows[0];
+            } else if self.top_but.mouse_over(mx, my) {
+                self.main_y_scroll_offset = 0.0;
+            } else if self.clear_but.mouse_over(mx, my) {
+                self.clue_rows.truncate(1);
+                let row = &mut self.clue_rows[0];
                 row.dots = 0;
                 row.hearts = 0;
                 row.slots.iter_mut().for_each(|slot| *slot = None);
-                solutions.clear();
-                free_pegs.clear();
-                solve_msg.clear();
+                self.solutions.clear();
+                self.free_pegs.clear();
+                self.solve_msg.clear();
                 clicked_something = true;
-                main_y_scroll_offset = 0.0;
-            } else if solve_but.mouse_over(mx, my) {
-                match conv_mmsolv(&clue_rows) {
+                self.main_y_scroll_offset = 0.0;
+            } else if self.solve_but.mouse_over(mx, my) {
+                match conv_mmsolv(&self.clue_rows) {
                     Ok(clues) => {
-                        solutions = solve_bruteforce_raw(&free_pegs, &clues)
+                        self.solutions = solve_bruteforce_raw(&self.free_pegs, &clues)
                             .take(MAX_SOLUTIONS)
                             .collect();
                         let len_s;
-                        solve_msg = format!(
+                        self.solve_msg = format!(
                             "{} solution{}",
-                            if solutions.is_empty() {
+                            if self.solutions.is_empty() {
                                 "No"
                             } else {
                                 len_s = format!(
                                     "{}{}",
-                                    solutions.len(),
-                                    if solutions.len() == 99 { "(+)" } else { "" }
+                                    self.solutions.len(),
+                                    if self.solutions.len() == 99 {
+                                        "(+)"
+                                    } else {
+                                        ""
+                                    }
                                 );
                                 &len_s
                             },
-                            if solutions.len() > 1 { "s" } else { "" }
+                            if self.solutions.len() > 1 { "s" } else { "" }
                         );
                     }
                     Err(e) => {
-                        solve_msg = e;
-                        solutions.clear();
+                        self.solve_msg = e;
+                        self.solutions.clear();
                     }
                 }
                 clicked_something = true;
             }
-            for row in &mut clue_rows {
-                if row.dot_add_but.mouse_over(mx, my) && row.dots < n_pegs_in_clues.value() {
+            for row in &mut self.clue_rows {
+                if row.dot_add_but.mouse_over(mx, my) && row.dots < self.n_pegs_in_clues.value() {
                     row.dots += 1;
                     clicked_something = true;
                 }
-                if row.heart_add_but.mouse_over(mx, my) && row.hearts < n_pegs_in_clues.value() {
+                if row.heart_add_but.mouse_over(mx, my) && row.hearts < self.n_pegs_in_clues.value()
+                {
                     row.hearts += 1;
                     clicked_something = true;
                 }
@@ -503,26 +564,26 @@ async fn main() {
                     clicked_something = true;
                 }
             }
-            if picked_peg.is_none() {
+            if self.picked_peg.is_none() {
                 if my > FREE_PEGS_RECT.y + FREE_PEGS_RECT.h {
-                    for peg in pickable_pegs(left_y_scroll_offset, &free_pegs) {
+                    for peg in pickable_pegs(self.left_y_scroll_offset, &self.free_pegs) {
                         if peg.rect().contains(Vec2::new(mx, my)) {
-                            picked_peg = Some(peg);
+                            self.picked_peg = Some(peg);
                             clicked_something = true;
                         }
                     }
                 }
                 let mut rem = None;
                 for (clue_rect, row, col) in clue_rects(
-                    &clue_rows,
-                    n_pegs_in_clues.value() == 7,
-                    main_y_scroll_offset,
+                    &self.clue_rows,
+                    self.n_pegs_in_clues.value() == 7,
+                    self.main_y_scroll_offset,
                 ) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
-                        picked_peg = match clue_rows.get(row) {
+                        self.picked_peg = match self.clue_rows.get(row) {
                             Some(clue_row) => match clue_row.slots.get(col) {
                                 Some(Some(id)) => {
-                                    if !is_key_down(KeyCode::LeftControl) {
+                                    if !is_key_down(fc, KeyCode::LeftControl) {
                                         rem = Some((row, col));
                                     }
                                     clicked_something = true;
@@ -540,94 +601,115 @@ async fn main() {
                     }
                 }
                 if let Some((row, col)) = rem {
-                    clue_rows[row].slots[col] = None;
+                    self.clue_rows[row].slots[col] = None;
                 }
                 let mut rem = None;
-                for (i, peg) in crate::free_pegs(&free_pegs) {
+                for (i, peg) in crate::free_pegs(&self.free_pegs) {
                     if peg.rect().contains(Vec2::new(mx, my)) {
                         clicked_something = true;
-                        picked_peg = Some(peg);
+                        self.picked_peg = Some(peg);
                         rem = Some(i);
                     }
                 }
                 if let Some(idx) = rem {
-                    free_pegs.remove(idx);
+                    self.free_pegs.remove(idx);
                 }
                 if !clicked_something {
                     if mx > MAIN_AREA_START_X {
-                        view_drag_center_y = Some(my);
-                        stored_main_y_scroll_offset = main_y_scroll_offset;
+                        self.view_drag_center_y = Some(my);
+                        self.stored_main_y_scroll_offset = self.main_y_scroll_offset;
                     } else {
-                        left_drag_center_y = Some(my);
-                        stored_left_y_scroll_offset = left_y_scroll_offset;
+                        self.left_drag_center_y = Some(my);
+                        self.stored_left_y_scroll_offset = self.left_y_scroll_offset;
                     }
                 }
             }
         }
-        if is_mouse_button_pressed(MouseButton::Right)
-            || is_mouse_button_pressed(MouseButton::Middle)
+        if is_mouse_button_pressed(fc, MouseButton::Right)
+            || is_mouse_button_pressed(fc, MouseButton::Middle)
         {
             // Convenience add empty row if rows are full
-            if clue_rows.full() {
-                clue_rows.push(ClueRow::new(n_pegs_in_clues.value()));
+            if self.clue_rows.full() {
+                self.clue_rows
+                    .push(ClueRow::new(self.n_pegs_in_clues.value()));
             }
-            for peg in pickable_pegs(left_y_scroll_offset, &free_pegs) {
+            for peg in pickable_pegs(self.left_y_scroll_offset, &self.free_pegs) {
                 if peg.rect().contains(Vec2::new(mx, my)) {
-                    if let Some(empty) = first_empty_clue(&mut clue_rows) {
+                    if let Some(empty) = first_empty_clue(&mut self.clue_rows) {
                         *empty = Some(peg.id);
                     }
                 }
             }
         }
-        if let Some(view_drag_center_y_val) = view_drag_center_y {
-            main_y_scroll_offset = stored_main_y_scroll_offset - (view_drag_center_y_val - my);
+        if let Some(view_drag_center_y_val) = self.view_drag_center_y {
+            self.main_y_scroll_offset =
+                self.stored_main_y_scroll_offset - (view_drag_center_y_val - my);
         }
-        if let Some(left_drag_center_y_val) = left_drag_center_y {
-            left_y_scroll_offset = stored_left_y_scroll_offset - (left_drag_center_y_val - my);
+        if let Some(left_drag_center_y_val) = self.left_drag_center_y {
+            self.left_y_scroll_offset =
+                self.stored_left_y_scroll_offset - (left_drag_center_y_val - my);
         }
-        if main_y_scroll_offset > 0.0 {
-            main_y_scroll_offset = 0.0;
+        if self.main_y_scroll_offset > 0.0 {
+            self.main_y_scroll_offset = 0.0;
         }
-        if left_y_scroll_offset > 0.0 {
-            left_y_scroll_offset = 0.0;
+        if self.left_y_scroll_offset > 0.0 {
+            self.left_y_scroll_offset = 0.0;
         }
         let min_y_scroll_left = -((PEG_SIZE + 1.0) * 4.0);
-        if left_y_scroll_offset < min_y_scroll_left {
-            left_y_scroll_offset = min_y_scroll_left;
+        if self.left_y_scroll_offset < min_y_scroll_left {
+            self.left_y_scroll_offset = min_y_scroll_left;
         }
         draw_vert_scroll_bar(
+            fc,
             MAIN_AREA_START_X - 12.,
             FREE_PEGS_RECT.y + FREE_PEGS_RECT.h + 14.0,
-            screen_height(),
-            left_y_scroll_offset,
+            screen_height(fc),
+            self.left_y_scroll_offset,
             min_y_scroll_left,
         );
         draw_vert_scroll_bar(
-            screen_width() - 12.0,
+            fc,
+            screen_width(fc) - 12.0,
             12.0,
-            screen_height(),
-            -main_y_scroll_offset,
+            screen_height(fc),
+            -self.main_y_scroll_offset,
             9000.0,
         );
-        let can_drop_free = if let Some(peg) = picked_peg {
+        let can_drop_free = if let Some(peg) = self.picked_peg {
             FREE_PEGS_RECT.contains(Vec2::new(mx, my))
-                && free_pegs.len() < 6
-                && !free_pegs.contains(&peg.id)
-                && !clue_rows
+                && self.free_pegs.len() < 6
+                && !self.free_pegs.contains(&peg.id)
+                && !self
+                    .clue_rows
                     .iter()
                     .any(|row| row.slots.contains(&Some(peg.id)))
         } else {
             false
         };
-        if is_mouse_button_released(MouseButton::Left) {
-            view_drag_center_y = None;
-            left_drag_center_y = None;
-            if let Some(peg) = picked_peg {
+        macro_rules! rect_for_solve_button {
+            () => {{
+                let idx = if self.n_pegs_in_clues.value() == 7 {
+                    5
+                } else {
+                    0
+                };
+                clue_rect(
+                    self.clue_rows.len() - 1,
+                    idx,
+                    self.n_pegs_in_clues.value() == 7,
+                    self.main_y_scroll_offset,
+                )
+            }};
+        }
+        if is_mouse_button_released(fc, MouseButton::Left) {
+            self.view_drag_center_y = None;
+            self.left_drag_center_y = None;
+            if let Some(peg) = self.picked_peg {
                 let mut ins_loc = None;
                 for (clue_rect, row, col) in clue_rects(
-                    &clue_rows,
-                    n_pegs_in_clues.value() == 7,
-                    main_y_scroll_offset,
+                    &self.clue_rows,
+                    self.n_pegs_in_clues.value() == 7,
+                    self.main_y_scroll_offset,
                 ) {
                     if clue_rect.contains(Vec2::new(mx, my)) {
                         ins_loc = Some((row, col));
@@ -635,26 +717,35 @@ async fn main() {
                     }
                 }
                 if let Some((row, col)) = ins_loc {
-                    clue_rows[row].slots[col] = Some(peg.id);
+                    self.clue_rows[row].slots[col] = Some(peg.id);
                 }
                 if can_drop_free {
-                    free_pegs.push(peg.id);
+                    self.free_pegs.push(peg.id);
                 }
-                picked_peg = None;
+                self.picked_peg = None;
             }
         }
         draw_clue_rows(
-            &mut clue_rows,
+            fc,
+            &mut self.clue_rows,
             mx,
             my,
-            picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color()),
-            &tex,
-            n_pegs_in_clues.value() == 7,
-            main_y_scroll_offset,
-            &mat,
+            self.picked_peg
+                .map(|p| color::SCHEMES[p.id as usize].skin_color()),
+            &self.tex,
+            self.n_pegs_in_clues.value() == 7,
+            self.main_y_scroll_offset,
+            &self.mat,
         );
-        draw_pickable_pegs(&tex, left_y_scroll_offset, &mat, &free_pegs);
+        draw_pickable_pegs(
+            fc,
+            &self.tex,
+            self.left_y_scroll_offset,
+            &self.mat,
+            &self.free_pegs,
+        );
         draw_rectangle(
+            fc,
             0.0,
             0.0,
             FREE_PEGS_RECT.x + FREE_PEGS_RECT.w,
@@ -662,69 +753,91 @@ async fn main() {
             WHITE,
         );
         draw_solutions(
-            &solutions,
-            &tex,
+            fc,
+            &self.solutions,
+            &self.tex,
             rect_for_solve_button!(),
-            n_pegs_in_clues.value() == 7,
-            &mat,
+            self.n_pegs_in_clues.value() == 7,
+            &self.mat,
         );
         draw_free_pegs(
-            &tex,
-            &free_pegs,
+            fc,
+            &self.tex,
+            &self.free_pegs,
             mx,
             my,
             if can_drop_free {
-                picked_peg.map(|p| color::SCHEMES[p.id as usize].skin_color())
+                self.picked_peg
+                    .map(|p| color::SCHEMES[p.id as usize].skin_color())
             } else {
                 None
             },
-            &mat,
+            &self.mat,
         );
-        if let Some(ref mut peg) = picked_peg {
+        if let Some(ref mut peg) = self.picked_peg {
             peg.x = mx - 32.;
             peg.y = my - 32.;
-            draw_peg(&tex, *peg, &mat);
+            draw_peg(fc, &self.tex, *peg, &self.mat);
         }
-        ptype_but.draw(mx, my);
-        draw_text(format!("{} rows", clue_rows.len()), 8.0, 64.0, 32.0, BLACK);
+        self.ptype_but.draw(fc, mx, my);
         draw_text(
+            fc,
+            format!("{} rows", self.clue_rows.len()),
+            8.0,
+            64.0,
+            32.0,
+            BLACK,
+        );
+        draw_text(
+            fc,
             "Free pegs",
             FREE_PEGS_RECT.x + 4.0,
             FREE_PEGS_RECT.y + 24.0,
             32.0,
             BLACK,
         );
-        clue_add_but.draw(&tex, mx, my);
-        clue_rem_but.draw(&tex, mx, my);
-        repos_solve_but(&mut solve_but, rect_for_solve_button!());
-        solve_but.draw(mx, my);
-        top_but.draw(mx, my);
-        clear_but.draw(mx, my);
+        self.clue_add_but.draw(fc, &self.tex, mx, my);
+        self.clue_rem_but.draw(fc, &self.tex, mx, my);
+        repos_solve_but(&mut self.solve_but, rect_for_solve_button!());
+        self.solve_but.draw(fc, mx, my);
+        self.top_but.draw(fc, mx, my);
+        self.clear_but.draw(fc, mx, my);
         draw_text(
-            &solve_msg,
-            solve_but.rect.x + solve_but.rect.w + 8.0,
-            solve_but.rect.y + 20.0,
+            fc,
+            &self.solve_msg,
+            self.solve_but.rect.x + self.solve_but.rect.w + 8.0,
+            self.solve_but.rect.y + 20.0,
             32.,
             BLACK,
         );
         draw_line(
+            fc,
             MAIN_AREA_START_X,
             0.0,
             MAIN_AREA_START_X,
-            screen_height(),
+            screen_height(fc),
             2.0,
             BLACK,
         );
-
-        next_frame().await;
     }
 }
 
-fn draw_vert_scroll_bar(x: f32, start_y: f32, end_y: f32, scroll: f32, max_scroll: f32) {
+fn main() {
+    frogquad::start(Conf::from_title("mmsolv"), |fc| Box::new(SolveApp::new(fc)));
+}
+
+fn draw_vert_scroll_bar(
+    fc: &mut FrogCx,
+    x: f32,
+    start_y: f32,
+    end_y: f32,
+    scroll: f32,
+    max_scroll: f32,
+) {
     let radius = 32.0;
     let ratio = scroll / max_scroll;
     let y = ratio * ((end_y - radius / 2.0) - start_y);
-    draw_circle(x, start_y + y, 8.0, BLUE);
+    draw_circle(fc, x, start_y + y, 8.0, BLUE);
 }
 
 fn free_pegs(pegs: &[u8]) -> impl Iterator<Item = (usize, Pegbug)> + '_ {
@@ -754,6 +867,7 @@ const FREE_PEGS_RECT: Rect = Rect {
 const FREE_PEGS_MAX_PER_ROW: u8 = 3;
 
 fn draw_free_pegs(
+    fc: &mut FrogCx,
     peg_tex: &Texture2D,
     free_pegs: &[u8],
     mx: f32,
@@ -764,6 +878,7 @@ fn draw_free_pegs(
     if let Some(c) = picked_color {
         if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) {
             draw_rectangle(
+                fc,
                 FREE_PEGS_RECT.x,
                 FREE_PEGS_RECT.y,
                 FREE_PEGS_RECT.w,
@@ -773,6 +888,7 @@ fn draw_free_pegs(
         }
     }
     draw_rectangle_lines(
+        fc,
         FREE_PEGS_RECT.x,
         FREE_PEGS_RECT.y,
         FREE_PEGS_RECT.w,
@@ -782,11 +898,12 @@ fn draw_free_pegs(
     );
 
     for (_, peg) in crate::free_pegs(free_pegs) {
-        draw_peg(peg_tex, peg, mat);
+        draw_peg(fc, peg_tex, peg, mat);
     }
 }
 
 fn draw_solutions(
+    fc: &mut FrogCx,
     solutions: &[Vec<u8>],
     peg_tex: &Texture2D,
     bottom_rect: Rect,
@@ -809,7 +926,7 @@ fn draw_solutions(
                 } else {
                     row as f32 * 68.
                 };
-            draw_peg(peg_tex, Pegbug { x, y, id: *peg_id }, mat);
+            draw_peg(fc, peg_tex, Pegbug { x, y, id: *peg_id }, mat);
         }
     }
 }

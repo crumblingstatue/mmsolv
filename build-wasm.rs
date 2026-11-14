@@ -9,7 +9,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cargo build
             --target=wasm32-unknown-unknown
             --release
-            -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
     }?;
     let mut target_dir: std::path::PathBuf =
         cmd_lib::run_fun!(cargo metadata | jq -r .target_directory)?.into();

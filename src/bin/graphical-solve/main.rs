@@ -5,11 +5,23 @@ mod button;
 mod color;
 mod util;
 
+use frogquad::{
+    glam::Vec2,
+    input::{KeyCode, MouseButton},
+    material::{Material, MaterialParams},
+    math::Rect,
+    miniquad::PipelineParams,
+    texture::{DrawTextureParams, Texture2D},
+};
 use util::ValLooper;
 
 use button::{ImgButton, SimpleButton};
-use frogquad::{FrogCx, prelude::*};
-use miniquad::{BlendFactor, BlendState, BlendValue, Equation};
+use frogquad::{
+    Color, FrogCx,
+    miniquad::{
+        BlendFactor, BlendState, BlendValue, Equation, ShaderSource, UniformDesc, UniformType,
+    },
+};
 use mmsolv::{Clue, Indicator, solve_bruteforce_raw};
 
 const PEG_SIZE: f32 = 64.0;
@@ -62,7 +74,7 @@ fn pickable_pegs(y_offset: f32, free_pegs: &[u8]) -> impl Iterator<Item = Pegbug
 }
 
 mod src_rects {
-    use frogquad::prelude::Rect;
+    use frogquad::math::Rect;
     const fn r(x: u8, y: u8, w: u8, h: u8) -> Rect {
         Rect {
             x: x as f32,
@@ -91,9 +103,9 @@ fn draw_peg(fc: &mut FrogCx, peg_tex: &Texture2D, peg: Pegbug, mat: &Material) {
     mat.set_uniform_array(&mut fc.gl, "r_body", &skin);
     mat.set_uniform_array(&mut fc.gl, "r_eye", &eyes);
     mat.set_uniform_array(&mut fc.gl, "r_eyeshine", &eyes_shine);
-    gl_use_material(&mut fc.gl, mat);
-    draw_texture_ex(fc, peg_tex, peg.x, peg.y, WHITE, params);
-    gl_use_default_material(&mut fc.gl);
+    fc.gl.use_material(mat);
+    fc.draw_texture_ex(peg_tex, peg.x, peg.y, Color::WHITE, params);
+    fc.gl.use_default_material();
 }
 
 fn draw_pickable_pegs(
@@ -130,10 +142,10 @@ impl ClueRow {
             slots: vec![None; slots as usize],
             hearts: 0,
             dots: 0,
-            dot_add_but: ImgButton::new(src_rects::PLUS, 0., 0., GRAY, LIGHTGRAY),
-            dot_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., GRAY, LIGHTGRAY),
-            heart_add_but: ImgButton::new(src_rects::PLUS, 0., 0., RED, HEART_BUT_DOWN_COL),
-            heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., RED, HEART_BUT_DOWN_COL),
+            dot_add_but: ImgButton::new(src_rects::PLUS, 0., 0., Color::GRAY, Color::LIGHTGRAY),
+            dot_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., Color::GRAY, Color::LIGHTGRAY),
+            heart_add_but: ImgButton::new(src_rects::PLUS, 0., 0., Color::RED, HEART_BUT_DOWN_COL),
+            heart_rem_but: ImgButton::new(src_rects::MINUS, 0., 0., Color::RED, HEART_BUT_DOWN_COL),
         }
     }
 
@@ -215,7 +227,7 @@ fn draw_clue_row(
         let rect = clue_rect(row_num, i, seven_peg, y_scroll_offset);
         if let Some(picked_color) = picked_color {
             if rect.contains(Vec2::new(mx, my)) {
-                draw_rectangle(fc, rect.x, rect.y, rect.w, rect.h, picked_color);
+                fc.draw_rectangle(rect.x, rect.y, rect.w, rect.h, picked_color);
             }
         }
         if let Some(pegid) = *slot {
@@ -230,7 +242,7 @@ fn draw_clue_row(
                 mat,
             );
         }
-        draw_rectangle_lines(fc, rect.x, rect.y, rect.w, rect.h, 2.0, RED);
+        fc.draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, Color::RED);
     }
     let last_rect_idx = if seven_peg { 1 } else { row.slots.len() - 1 };
     let last_rect = clue_rect(row_num, last_rect_idx, seven_peg, y_scroll_offset);
@@ -247,12 +259,11 @@ fn draw_clue_row(
     row.dot_add_but.draw(fc, tex, mx, my);
     row.dot_rem_but.draw(fc, tex, mx, my);
     for i in 0..row.hearts {
-        draw_texture_ex(
-            fc,
+        fc.draw_texture_ex(
             tex,
             last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 8.0,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
                 source: Some(src_rects::HEART),
                 ..Default::default()
@@ -260,12 +271,11 @@ fn draw_clue_row(
         );
     }
     for i in 0..row.dots {
-        draw_texture_ex(
-            fc,
+        fc.draw_texture_ex(
             tex,
             last_rect.x + 16. + BOX_SIZE + 50. + f32::from(i) * 24.,
             last_rect.y + 40.0,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
                 source: Some(src_rects::DOT),
                 ..Default::default()
@@ -385,8 +395,10 @@ impl SolveApp {
             8.0,
             32,
         );
-        let clue_add_but = ImgButton::new(src_rects::PLUS, 110.0, 44.0, GRAY, LIGHTGRAY);
-        let clue_rem_but = ImgButton::new(src_rects::MINUS, 140.0, 44.0, GRAY, LIGHTGRAY);
+        let clue_add_but =
+            ImgButton::new(src_rects::PLUS, 110.0, 44.0, Color::GRAY, Color::LIGHTGRAY);
+        let clue_rem_but =
+            ImgButton::new(src_rects::MINUS, 140.0, 44.0, Color::GRAY, Color::LIGHTGRAY);
         let solve_but = SimpleButton::new(fc, "Solve".into(), 8.0, 96.0, 32);
         let clear_but = SimpleButton::new(fc, "X".into(), 184.0, 44.0, 40);
         let top_but = SimpleButton::new(fc, "^".into(), 184.0, 8.0, 40);
@@ -404,42 +416,42 @@ impl SolveApp {
             include_bytes!("../../../assets/spritesheet.png"),
             None,
         );
-        let mat = load_material(
-            fc,
-            ShaderSource::Glsl {
-                vertex: include_str!("../../../assets/vertex_shader.glsl"),
-                fragment: include_str!("../../../assets/color_shader.glsl"),
-            },
-            MaterialParams {
-                uniforms: vec![
-                    UniformDesc {
-                        name: "r_body".into(),
-                        uniform_type: UniformType::Float3,
-                        array_count: 1,
+        let mat = fc
+            .load_material(
+                ShaderSource::Glsl {
+                    vertex: include_str!("../../../assets/vertex_shader.glsl"),
+                    fragment: include_str!("../../../assets/color_shader.glsl"),
+                },
+                MaterialParams {
+                    uniforms: vec![
+                        UniformDesc {
+                            name: "r_body".into(),
+                            uniform_type: UniformType::Float3,
+                            array_count: 1,
+                        },
+                        UniformDesc {
+                            name: "r_eye".into(),
+                            uniform_type: UniformType::Float3,
+                            array_count: 1,
+                        },
+                        UniformDesc {
+                            name: "r_eyeshine".into(),
+                            uniform_type: UniformType::Float3,
+                            array_count: 1,
+                        },
+                    ],
+                    pipeline_params: PipelineParams {
+                        color_blend: Some(BlendState::new(
+                            Equation::Add,
+                            BlendFactor::Value(BlendValue::SourceAlpha),
+                            BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
+                        )),
+                        ..Default::default()
                     },
-                    UniformDesc {
-                        name: "r_eye".into(),
-                        uniform_type: UniformType::Float3,
-                        array_count: 1,
-                    },
-                    UniformDesc {
-                        name: "r_eyeshine".into(),
-                        uniform_type: UniformType::Float3,
-                        array_count: 1,
-                    },
-                ],
-                pipeline_params: PipelineParams {
-                    color_blend: Some(BlendState::new(
-                        Equation::Add,
-                        BlendFactor::Value(BlendValue::SourceAlpha),
-                        BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
-                    )),
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-        )
-        .unwrap();
+            )
+            .unwrap();
         Self {
             main_y_scroll_offset,
             left_y_scroll_offset,
@@ -468,10 +480,10 @@ impl SolveApp {
 impl frogquad::App for SolveApp {
     #![expect(clippy::too_many_lines)]
     fn update(&mut self, fc: &mut frogquad::FrogCx) {
-        clear_background(fc, WHITE);
-        let (mx, my) = mouse_position(fc);
+        fc.clear_background(Color::WHITE);
+        let (mx, my) = fc.mouse_position();
 
-        let (_, mw_y) = mouse_wheel(fc);
+        let Vec2 { x: _, y: mw_y } = fc.mouse_wheel();
         let offs = mw_y * 32.0;
         if mx > MAIN_AREA_START_X {
             self.main_y_scroll_offset += offs;
@@ -479,7 +491,7 @@ impl frogquad::App for SolveApp {
             self.left_y_scroll_offset += offs;
         }
         // Handle mouse pressed
-        if is_mouse_button_pressed(fc, MouseButton::Left) {
+        if fc.is_mouse_button_pressed(MouseButton::Left) {
             let mut clicked_something = false;
             if self.ptype_but.mouse_over(mx, my) {
                 self.n_pegs_in_clues.go_next();
@@ -583,7 +595,7 @@ impl frogquad::App for SolveApp {
                         self.picked_peg = match self.clue_rows.get(row) {
                             Some(clue_row) => match clue_row.slots.get(col) {
                                 Some(Some(id)) => {
-                                    if !is_key_down(fc, KeyCode::LeftControl) {
+                                    if !fc.is_key_down(KeyCode::LeftControl) {
                                         rem = Some((row, col));
                                     }
                                     clicked_something = true;
@@ -625,8 +637,8 @@ impl frogquad::App for SolveApp {
                 }
             }
         }
-        if is_mouse_button_pressed(fc, MouseButton::Right)
-            || is_mouse_button_pressed(fc, MouseButton::Middle)
+        if fc.is_mouse_button_pressed(MouseButton::Right)
+            || fc.is_mouse_button_pressed(MouseButton::Middle)
         {
             // Convenience add empty row if rows are full
             if self.clue_rows.full() {
@@ -663,15 +675,15 @@ impl frogquad::App for SolveApp {
             fc,
             MAIN_AREA_START_X - 12.,
             FREE_PEGS_RECT.y + FREE_PEGS_RECT.h + 14.0,
-            screen_height(fc),
+            fc.screen_height(),
             self.left_y_scroll_offset,
             min_y_scroll_left,
         );
         draw_vert_scroll_bar(
             fc,
-            screen_width(fc) - 12.0,
+            fc.screen_width() - 12.0,
             12.0,
-            screen_height(fc),
+            fc.screen_height(),
             -self.main_y_scroll_offset,
             9000.0,
         );
@@ -701,7 +713,7 @@ impl frogquad::App for SolveApp {
                 )
             }};
         }
-        if is_mouse_button_released(fc, MouseButton::Left) {
+        if fc.is_mouse_button_released(MouseButton::Left) {
             self.view_drag_center_y = None;
             self.left_drag_center_y = None;
             if let Some(peg) = self.picked_peg {
@@ -744,13 +756,12 @@ impl frogquad::App for SolveApp {
             &self.mat,
             &self.free_pegs,
         );
-        draw_rectangle(
-            fc,
+        fc.draw_rectangle(
             0.0,
             0.0,
             FREE_PEGS_RECT.x + FREE_PEGS_RECT.w,
             FREE_PEGS_RECT.y + FREE_PEGS_RECT.h,
-            WHITE,
+            Color::WHITE,
         );
         draw_solutions(
             fc,
@@ -780,21 +791,19 @@ impl frogquad::App for SolveApp {
             draw_peg(fc, &self.tex, *peg, &self.mat);
         }
         self.ptype_but.draw(fc, mx, my);
-        draw_text(
-            fc,
+        fc.draw_text(
             format!("{} rows", self.clue_rows.len()),
             8.0,
             64.0,
             32.0,
-            BLACK,
+            Color::BLACK,
         );
-        draw_text(
-            fc,
+        fc.draw_text(
             "Free pegs",
             FREE_PEGS_RECT.x + 4.0,
             FREE_PEGS_RECT.y + 24.0,
             32.0,
-            BLACK,
+            Color::BLACK,
         );
         self.clue_add_but.draw(fc, &self.tex, mx, my);
         self.clue_rem_but.draw(fc, &self.tex, mx, my);
@@ -802,28 +811,26 @@ impl frogquad::App for SolveApp {
         self.solve_but.draw(fc, mx, my);
         self.top_but.draw(fc, mx, my);
         self.clear_but.draw(fc, mx, my);
-        draw_text(
-            fc,
+        fc.draw_text(
             &self.solve_msg,
             self.solve_but.rect.x + self.solve_but.rect.w + 8.0,
             self.solve_but.rect.y + 20.0,
             32.,
-            BLACK,
+            Color::BLACK,
         );
-        draw_line(
-            fc,
+        fc.draw_line(
             MAIN_AREA_START_X,
             0.0,
             MAIN_AREA_START_X,
-            screen_height(fc),
+            fc.screen_height(),
             2.0,
-            BLACK,
+            Color::BLACK,
         );
     }
 }
 
 fn main() {
-    frogquad::start(Conf::from_title("mmsolv"), |fc| Box::new(SolveApp::new(fc)));
+    frogquad::start("mmsolv", SolveApp::new);
 }
 
 fn draw_vert_scroll_bar(
@@ -837,7 +844,7 @@ fn draw_vert_scroll_bar(
     let radius = 32.0;
     let ratio = scroll / max_scroll;
     let y = ratio * ((end_y - radius / 2.0) - start_y);
-    draw_circle(fc, x, start_y + y, 8.0, BLUE);
+    fc.draw_circle(x, start_y + y, 8.0, Color::BLUE);
 }
 
 fn free_pegs(pegs: &[u8]) -> impl Iterator<Item = (usize, Pegbug)> + '_ {
@@ -877,8 +884,7 @@ fn draw_free_pegs(
 ) {
     if let Some(c) = picked_color {
         if FREE_PEGS_RECT.contains(Vec2::new(mx, my)) {
-            draw_rectangle(
-                fc,
+            fc.draw_rectangle(
                 FREE_PEGS_RECT.x,
                 FREE_PEGS_RECT.y,
                 FREE_PEGS_RECT.w,
@@ -887,14 +893,13 @@ fn draw_free_pegs(
             );
         }
     }
-    draw_rectangle_lines(
-        fc,
+    fc.draw_rectangle_lines(
         FREE_PEGS_RECT.x,
         FREE_PEGS_RECT.y,
         FREE_PEGS_RECT.w,
         FREE_PEGS_RECT.h,
         2.0,
-        GREEN,
+        Color::GREEN,
     );
 
     for (_, peg) in crate::free_pegs(free_pegs) {

@@ -1,4 +1,9 @@
-use frogquad::{FrogCx, prelude::*};
+use frogquad::{
+    Color, FrogCx,
+    glam::Vec2,
+    math::Rect,
+    texture::{DrawTextureParams, Texture2D},
+};
 
 pub struct SimpleButton {
     pub rect: Rect,
@@ -37,20 +42,12 @@ impl ImgButton {
         } else {
             self.up_color
         };
-        draw_rectangle(
-            fc,
-            self.rect.x,
-            self.rect.y,
-            self.rect.w,
-            self.rect.h,
-            bg_color,
-        );
-        draw_texture_ex(
-            fc,
+        fc.draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, bg_color);
+        fc.draw_texture_ex(
             tex,
             self.rect.x + IMG_BUTTON_PADDING / 2.0,
             self.rect.y + IMG_BUTTON_PADDING / 2.0,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
                 source: Some(self.img_src_rect),
                 ..Default::default()
@@ -82,7 +79,9 @@ impl SimpleButton {
     }
     pub fn set_text(&mut self, fc: &mut FrogCx, text: String) {
         self.text = text;
-        let tdim = measure_text(&self.text, fc.default_font(), self.font_size, 1.0);
+        let tdim = fc
+            .default_font()
+            .measure_text(&self.text, self.font_size, 1.0);
         self.rect.w = tdim.width + BUTTON_PADDING;
         self.rect.h = tdim.height + BUTTON_PADDING;
         self.text_offset_y = tdim.offset_y;
@@ -92,20 +91,19 @@ impl SimpleButton {
     }
     pub fn draw(&self, fc: &mut FrogCx, mx: f32, my: f32) {
         let bg_color = if self.mouse_over(mx, my) {
-            LIGHTGRAY
+            Color::LIGHTGRAY
         } else {
-            GRAY
+            Color::GRAY
         };
         let Rect { x, y, w, h } = self.rect;
-        draw_rectangle(fc, x, y, w, h, bg_color);
-        draw_rectangle_lines(fc, x, y, w, h, 1.0, BLACK);
-        draw_text(
-            fc,
+        fc.draw_rectangle(x, y, w, h, bg_color);
+        fc.draw_rectangle_lines(x, y, w, h, 1.0, Color::BLACK);
+        fc.draw_text(
             &self.text,
             x + BUTTON_PADDING / 2.0,
             y + self.text_offset_y + BUTTON_PADDING / 2.0,
             f32::from(self.font_size),
-            BLACK,
+            Color::BLACK,
         );
     }
 }
